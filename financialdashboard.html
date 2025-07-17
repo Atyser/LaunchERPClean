@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client Financial Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            height: 40vh;
+            width: 100%;
+        }
+        .dashboard-card {
+            background-color: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .custom-select {
+            background-color: #1f2937;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        #logoUploadArea {
+            cursor: pointer;
+        }
+        /* AI Insights Formatting */
+        #aiInsightsContainer h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #a78bfa; /* Light purple */
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        #aiInsightsContainer p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        #aiInsightsContainer ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        #aiInsightsContainer li {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* AI Chat Bubble Styles */
+        .ai-chat-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        .ai-fab {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 9999px;
+            background-color: #4f46e5;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+        .ai-fab:hover {
+            transform: scale(1.1);
+        }
+        .ai-chat-window {
+            position: absolute;
+            bottom: 5rem;
+            right: 0;
+            width: 400px;
+            max-height: 600px;
+            background-color: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform-origin: bottom right;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform: scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ai-chat-window.open {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Collapsible Section */
+        .collapsible-section {
+            background-color: rgba(26, 32, 53, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+        }
+        .collapsible-header h2 {
+            margin: 0;
+        }
+        .toggle-arrow {
+            transition: transform 0.3s ease-in-out;
+        }
+        .collapsible-section.collapsed .toggle-arrow {
+            transform: rotate(-90deg);
+        }
+        .collapsible-content {
+            max-height: 3000px; /* Adjust as needed */
+            transition: max-height 0.7s ease-in-out, padding 0.7s ease-in-out, opacity 0.5s ease-in-out;
+            padding: 1.5rem;
+            opacity: 1;
+        }
+        .collapsible-section.collapsed .collapsible-content {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        /* Projections Table Dark Theme */
+        .projections-card {
+            background-color: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d1d5db; /* Light gray text */
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .projections-table-wrapper {
+             overflow-x: auto;
+        }
+        .projections-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+        }
+        .projections-table th, .projections-table td {
+            border: none;
+            padding: 1rem;
+            text-align: center;
+            vertical-align: top;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .projections-table th {
+            background-color: transparent;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom-width: 2px;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .projections-table tbody tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+        .projections-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        .projections-table .current-week-row {
+            background-color: rgba(79, 70, 229, 0.15) !important; /* Highlight for current week */
+        }
+        .week-collapsed {
+            display: none;
+        }
+        .projections-table .week-col {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #e5e7eb;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .projections-table .financial-col {
+            background-color: rgba(0,0,0, 0.1);
+            font-weight: 500;
+        }
+        .projections-table .ending-balance-cell {
+            font-weight: 700;
+            color: #a78bfa; /* Light Purple */
+        }
+        .projections-table .income-cell {
+            font-weight: 600;
+            color: #6ee7b7; /* Bright Green */
+        }
+        .projections-table td[contenteditable="true"] {
+            background-color: rgba(79, 70, 229, 0.1); /* Indigo tint */
+            cursor: cell;
+            transition: background-color 0.2s;
+            border-radius: 6px;
+        }
+        .projections-table td[contenteditable="true"]:focus {
+            background-color: rgba(79, 70, 229, 0.2);
+            outline: 2px solid #818cf8; /* Indigo outline */
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.3);
+        }
+        .day-cell {
+            position: relative;
+            padding-top: 2rem;
+            min-height: 100px;
+        }
+        .date-display {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+        }
+        .day-cell ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .day-cell li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            word-break: break-word;
+            background-color: #374151;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+        .day-cell li:hover {
+            background-color: #4b5563;
+        }
+        .income-item-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-grow: 1;
+        }
+        .income-item-name {
+            font-weight: 500;
+            color: #d1d5db;
+        }
+        .income-item-amount {
+            font-weight: 600;
+            color: #f9fafb;
+        }
+        .delete-income-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .day-cell li:hover .delete-income-btn {
+            opacity: 1;
+        }
+        .delete-income-btn:hover {
+            color: #fca5a5;
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+        .add-income-btn {
+            background-color: transparent;
+            border: 1px dashed #4b5563;
+            color: #9ca3af;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            text-align: center;
+            padding: 6px;
+            border-radius: 8px;
+            transition: all 0.2s ease-in-out;
+        }
+        .add-income-btn:hover {
+            background-color: rgba(79, 70, 229, 0.2);
+            color: #a78bfa;
+            border-color: #6366f1;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); display: none; align-items: center;
+            justify-content: center; z-index: 2000;
+        }
+        .modal-content {
+            background: #1f2937;
+            padding: 25px; border-radius: 12px;
+            width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative; border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e5e7eb;
+        }
+        .modal-content h3 { margin-top: 0; color: #fff; }
+        .modal-content .panel-field { margin-bottom: 1rem; }
+        .modal-content .panel-field label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #d1d5db; }
+        .modal-content .panel-field input {
+            width: 100%;
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #e5e7eb;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .modal-content .panel-field input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.5);
+        }
+        .modal-actions { text-align: right; margin-top: 1.5rem; }
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .modal-button:active {
+            transform: translateY(1px);
+        }
+        .modal-button.save {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .modal-button.save:hover {
+            background-color: #6366f1;
+        }
+        .modal-button.cancel {
+            background-color: #4b5563;
+            color: #d1d5db;
+            margin-right: 10px;
+        }
+        .modal-button.cancel:hover {
+            background-color: #6b7280;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 bg-gradient-to-br from-[#0d142b] to-[#111827]">
+
+    <!-- Header -->
+    <header class="bg-transparent">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                 <svg class="h-8 w-8 text-indigo-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <h1 class="text-xl font-bold text-gray-100">Financial Dashboard</h1>
+            </div>
+             <nav class="hidden md:flex items-center space-x-8">
+                <a href="#" class="text-gray-400 hover:text-white">Dashboard</a>
+                <a href="#" class="text-gray-400 hover:text-white">Reports</a>
+                <a href="#" class="text-gray-400 hover:text-white">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Centered Logo and Title -->
+        <div class="flex flex-col items-center mb-8">
+            <div id="logoUploadArea" class="h-24 p-2 rounded-lg mb-4 flex items-center justify-center">
+                 <img id="companyLogo" src="https://placehold.co/300x80/111827/a0aec0?text=Click+to+Upload+Logo" alt="Company Logo" class="max-h-full max-w-full">
+            </div>
+             <input type="file" id="logoUploader" accept="image/*" class="hidden">
+        </div>
+
+        <!-- Collapsible Charts Section -->
+        <div id="analytics-section" class="collapsible-section">
+            <div class="collapsible-header">
+                <h2 class="text-2xl font-semibold text-gray-100">Financial Analytics</h2>
+                <div class="toggle-arrow text-2xl">▼</div>
+            </div>
+            <div class="collapsible-content">
+                <div id="chartsSection" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Cumulative NOI and Tax -->
+                    <div class="dashboard-card p-6 rounded-xl shadow-lg">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-medium text-white">Cumulative NOI & Estimated Tax (25%)</h3>
+                            <div id="cumulativeTotals" class="text-right"></div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="noiChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Revenue vs Expenses -->
+                    <div class="dashboard-card p-6 rounded-xl shadow-lg">
+                         <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-medium text-white">Revenue vs. Expenses Over Time</h3>
+                             <div id="revenueExpenseTotals" class="text-right"></div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="revenueExpenseChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Periodical Net Income -->
+                    <div class="dashboard-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-medium text-white mb-4">Periodical Net Income / NOI</h3>
+                         <div class="chart-container">
+                            <canvas id="netIncomeChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Expense Details Card -->
+                    <div class="dashboard-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-medium text-white mb-4">Expense Analysis</h3>
+                        <div class="chart-container mb-8">
+                            <canvas id="expenseTrendChart"></canvas>
+                        </div>
+                        <h4 class="text-md font-medium text-white mb-2">Details by Period</h4>
+                        <select id="expensePeriodSelector" class="custom-select w-full p-2 rounded-md text-white mb-4"></select>
+                        <div id="expenseDetailsContainer" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
+                    </div>
+                     <!-- Cash Runway Chart -->
+                    <div class="dashboard-card p-6 rounded-xl shadow-lg md:col-span-2">
+                        <div class="flex justify-between items-start mb-4">
+                             <h3 class="text-lg font-medium text-white">Cash Runway Projection</h3>
+                             <div id="runway-summary" class="text-right"></div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="runwayChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Projections Table -->
+        <div class="projections-card rounded-xl shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-100">Yearly Projections</h2>
+                <div class="space-x-2">
+                    <button id="show-current-week-btn" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Show Current Week</button>
+                    <button id="toggle-past-weeks-btn" class="px-4 py-2 text-sm bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600">Show/Hide Past Weeks</button>
+                </div>
+            </div>
+            <div class="projections-table-wrapper">
+                <table class="projections-table">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+                            <th class="financial-col">Income</th>
+                            <th class="financial-col">Est. Payroll</th>
+                            <th class="financial-col">Est. Overhead</th>
+                            <th class="financial-col">Const. Costs</th>
+                            <th class="financial-col">Beginning Balance</th>
+                            <th class="financial-col">Ending Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projections-body">
+                        <!-- Table rows will be generated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- AI Chat Bubble -->
+    <div class="ai-chat-container">
+        <div id="aiChatWindow" class="ai-chat-window">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-white">AI Fractional CFO</h3>
+                <button id="closeChatBtn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div class="p-4 h-[450px] overflow-y-auto">
+                <div id="aiInsightsContainer" class="text-gray-300">
+                    <p>Click "Generate Insights" to get personalized financial feedback from your AI CFO.</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700">
+                 <button id="generateInsightsBtn" class="w-full px-4 py-2 text-sm bg-indigo-600 text-white rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Generate Insights
+                </button>
+            </div>
+        </div>
+        <div id="aiFab" class="ai-fab">
+            <svg class="w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c.621.428 1.25 1.004 1.767 1.622M9.75 3.104a2.25 2.25 0 00-1.06-1.061M14.25 3.104a2.25 2.25 0 00-1.061 1.061m0 0l-1.125 1.125m1.125-1.125a2.25 2.25 0 011.061 1.061m0 0l1.125 1.125m-1.125-1.125a2.25 2.25 0 00-1.767-1.622m0 0c.621-.428 1.25-1.004 1.767-1.622m-1.767 4.872a2.25 2.25 0 01-1.591.659v5.714m0 0a2.25 2.25 0 01-1.591-.659m1.591.659a2.25 2.25 0 001.591-.659m0 0l-5.714-5.714m5.714 5.714a2.25 2.25 0 00-5.714 0" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- Add Income Modal -->
+    <div id="income-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Add Income</h3>
+            <div class="panel-field">
+                <label for="income-property-name">Property Name / Address</label>
+                <input type="text" id="income-property-name" placeholder="e.g., 123 Main St">
+            </div>
+            <div class="panel-field">
+                <label for="income-amount">Amount</label>
+                <input type="number" id="income-amount" placeholder="e.g., 5000">
+            </div>
+            <div class="modal-actions">
+                <button id="income-modal-cancel" class="modal-button cancel">Cancel</button>
+                <button id="income-modal-save" class="modal-button save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- GLOBAL STATE & MOCK DATA ---
+            let financialHistory = [];
+            let projectionsData = [];
+            let revenueExpenseChart, netIncomeChart, noiChart, expenseTrendChart, runwayChart;
+            let calendarStartDate;
+            let pastWeeksCollapsed = true; // State for toggling past weeks
+
+            // ACCURATE MOCK DATA
+            const mockFinancialHistory = [
+                {
+                    period: { label: 'Jan 2025', endDate: new Date('2025-01-31') },
+                    totalRevenue: 52340.50,
+                    totalExpenses: 31550.20,
+                    netIncome: 20790.30,
+                    expenses: { 'Salaries and Wages': 15500.00, 'Rent or Lease': 5000.00, 'Software Subscriptions': 1250.75, 'Marketing & Advertising': 3500.00, 'Utilities': 899.45, 'Office Supplies': 650.00, 'Professional Services (Legal)': 2500.00, 'Insurance': 2250.00, }
+                },
+                {
+                    period: { label: 'Feb 2025', endDate: new Date('2025-02-28') },
+                    totalRevenue: 55100.00,
+                    totalExpenses: 33800.90,
+                    netIncome: 21299.10,
+                    expenses: { 'Salaries and Wages': 15750.00, 'Rent or Lease': 5000.00, 'Software Subscriptions': 1250.75, 'Marketing & Advertising': 4500.00, 'Utilities': 950.15, 'Office Supplies': 350.00, 'Travel': 1500.00, 'Insurance': 2250.00, 'Repairs & Maintenance': 2250.00, }
+                },
+                {
+                    period: { label: 'Mar 2025', endDate: new Date('2025-03-31') },
+                    totalRevenue: 61500.75,
+                    totalExpenses: 34550.50,
+                    netIncome: 26950.25,
+                    expenses: { 'Salaries and Wages': 16000.00, 'Rent or Lease': 5000.00, 'Software Subscriptions': 1300.75, 'Marketing & Advertising': 4800.00, 'Utilities': 1100.00, 'Office Supplies': 850.25, 'Insurance': 2250.00, 'Commissions': 3249.50, }
+                },
+                {
+                    period: { label: 'Apr 2025', endDate: new Date('2025-04-30') },
+                    totalRevenue: 58200.00,
+                    totalExpenses: 35100.00,
+                    netIncome: 23100.00,
+                    expenses: { 'Salaries and Wages': 16250.00, 'Rent or Lease': 5000.00, 'Software Subscriptions': 1300.75, 'Marketing & Advertising': 5200.00, 'Utilities': 950.25, 'Office Supplies': 400.00, 'Insurance': 2250.00, 'Meals & Entertainment': 1249.00, 'Bank Charges': 2500.00, }
+                }
+            ];
+
+            // --- GLOBAL ELEMENTS ---
+            const expensePeriodSelector = document.getElementById('expensePeriodSelector');
+            const expenseDetailsContainer = document.getElementById('expenseDetailsContainer');
+            const logoUploadArea = document.getElementById('logoUploadArea');
+            const logoUploader = document.getElementById('logoUploader');
+            const companyLogo = document.getElementById('companyLogo');
+            const aiFab = document.getElementById('aiFab');
+            const aiChatWindow = document.getElementById('aiChatWindow');
+            const closeChatBtn = document.getElementById('closeChatBtn');
+            const generateInsightsBtn = document.getElementById('generateInsightsBtn');
+            const aiInsightsContainer = document.getElementById('aiInsightsContainer');
+            const projectionsBody = document.getElementById('projections-body');
+            const showCurrentWeekBtn = document.getElementById('show-current-week-btn');
+            const togglePastWeeksBtn = document.getElementById('toggle-past-weeks-btn');
+            
+            // --- CHART STYLING & DEFAULTS ---
+            Chart.defaults.color = '#a0aec0';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+            
+            const chartColors = {
+                teal: { main: 'rgba(20, 184, 166, 1)', light: 'rgba(20, 184, 166, 0.2)', border: 'rgba(45, 212, 191, 1)' },
+                orange: { main: 'rgba(251, 146, 60, 1)', light: 'rgba(251, 146, 60, 0.2)', border: 'rgba(253, 186, 116, 1)' },
+                peach: { main: 'rgba(255, 229, 180, 0.4)'}
+            };
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12 } } },
+                    tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.8)', titleColor: '#fff', bodyColor: '#cbd5e1', padding: 10, cornerRadius: 6, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1 }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 10 } } },
+                    y: { ticks: { callback: (value) => `$${(value/1000).toFixed(0)}k` } }
+                }
+            };
+
+            // --- HELPER FUNCTIONS ---
+            function formatCurrency(value) {
+                const number = Number(value);
+                if (isNaN(number)) return '$0.00';
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(number);
+            }
+
+            function parseCurrency(value) {
+                return parseFloat(String(value).replace(/[^0-9.-]+/g, "")) || 0;
+            }
+
+            // --- CHART & UI LOGIC ---
+            function initCharts() {
+                financialHistory = mockFinancialHistory;
+                if (financialHistory.length === 0) return;
+
+                financialHistory.sort((a, b) => new Date(a.period.endDate) - new Date(b.period.endDate));
+                const labels = financialHistory.map(d => d.period.label);
+                let cumulativeNOI = 0;
+                const cumulativeNOIData = [], estimatedTaxData = [];
+                financialHistory.forEach(d => {
+                    cumulativeNOI += d.netIncome;
+                    cumulativeNOIData.push(cumulativeNOI);
+                    estimatedTaxData.push(cumulativeNOI * 0.25);
+                });
+
+                renderCumulativeNOIChart(labels, cumulativeNOIData, estimatedTaxData);
+                renderRevenueExpenseChart(labels);
+                renderNetIncomeChart(labels);
+                renderExpenseTrendChart(labels);
+                renderRunwayChart();
+                
+                populateExpenseDropdown();
+                renderExpenseDetails(financialHistory.length - 1);
+            }
+            
+            function renderCumulativeNOIChart(labels, noiData, taxData) {
+                const ctx = document.getElementById('noiChart').getContext('2d');
+                const tealGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                tealGradient.addColorStop(0, chartColors.teal.light);
+                tealGradient.addColorStop(1, 'rgba(20, 184, 166, 0)');
+                if(noiChart) noiChart.destroy();
+                noiChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [ { label: 'Cumulative NOI', data: noiData, borderColor: chartColors.teal.main, backgroundColor: tealGradient, fill: true, tension: 0.3 }, { label: 'Estimated Tax (25%)', data: taxData, borderColor: chartColors.orange.main, fill: false, tension: 0.3, borderDash: [5, 5] } ] }, options: chartOptions });
+
+                const cumulativeTotalsContainer = document.getElementById('cumulativeTotals');
+                const finalNOI = noiData.length > 0 ? noiData[noiData.length - 1] : 0;
+                const finalTax = taxData.length > 0 ? taxData[taxData.length - 1] : 0;
+                
+                cumulativeTotalsContainer.innerHTML = `
+                    <div class="text-sm">
+                        <span class="text-teal-400">NOI:</span>
+                        <span class="font-bold text-white">${formatCurrency(finalNOI)}</span>
+                    </div>
+                    <div class="text-sm">
+                        <span class="text-orange-400">Tax:</span>
+                        <span class="font-bold text-white">${formatCurrency(finalTax)}</span>
+                    </div>
+                `;
+            }
+            
+            function renderRevenueExpenseChart(labels) {
+                const ctx = document.getElementById('revenueExpenseChart').getContext('2d');
+                const tealGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                tealGradient.addColorStop(0, chartColors.teal.main);
+                tealGradient.addColorStop(1, 'rgba(20, 184, 166, 0.05)');
+                const orangeGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                orangeGradient.addColorStop(0, chartColors.orange.main);
+                orangeGradient.addColorStop(1, 'rgba(251, 146, 60, 0.1)');
+                if (revenueExpenseChart) revenueExpenseChart.destroy();
+                revenueExpenseChart = new Chart(ctx, { 
+                    type: 'bar', 
+                    data: { 
+                        labels, 
+                        datasets: [ 
+                            { label: 'Total Revenue', data: financialHistory.map(d => d.totalRevenue), backgroundColor: tealGradient, borderColor: chartColors.teal.border, borderWidth: 2, borderRadius: 4 }, 
+                            { label: 'Total Expenses', data: financialHistory.map(d => d.totalExpenses), backgroundColor: orangeGradient, borderColor: chartColors.orange.border, borderWidth: 2, borderRadius: 4 } 
+                        ] 
+                    }, 
+                    options: { ...chartOptions, scales: { x: { stacked: false }, y: { ...chartOptions.scales.y, stacked: false, beginAtZero: true } } } 
+                });
+                
+                const revenueExpenseTotalsContainer = document.getElementById('revenueExpenseTotals');
+                const totalRevenue = financialHistory.reduce((sum, item) => sum + item.totalRevenue, 0);
+                const totalExpenses = financialHistory.reduce((sum, item) => sum + item.totalExpenses, 0);
+                revenueExpenseTotalsContainer.innerHTML = `
+                    <div class="text-sm">
+                        <span class="text-teal-400">Revenue:</span>
+                        <span class="font-bold text-white">${formatCurrency(totalRevenue)}</span>
+                    </div>
+                    <div class="text-sm">
+                        <span class="text-orange-400">Expenses:</span>
+                        <span class="font-bold text-white">${formatCurrency(totalExpenses)}</span>
+                    </div>
+                `;
+            }
+            
+            function renderNetIncomeChart(labels) {
+                const ctx = document.getElementById('netIncomeChart').getContext('2d');
+                const tealGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                tealGradient.addColorStop(0, chartColors.teal.light);
+                tealGradient.addColorStop(1, 'rgba(20, 184, 166, 0)');
+                if (netIncomeChart) netIncomeChart.destroy();
+                netIncomeChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Periodical Net Income', data: financialHistory.map(d => d.netIncome), borderColor: chartColors.teal.main, backgroundColor: tealGradient, fill: true, tension: 0.3, pointBackgroundColor: chartColors.teal.main }] }, options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, beginAtZero: true } } } });
+            }
+
+            function renderExpenseTrendChart(labels) {
+                const ctx = document.getElementById('expenseTrendChart').getContext('2d');
+                const orangeGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                orangeGradient.addColorStop(0, chartColors.orange.light);
+                orangeGradient.addColorStop(1, chartColors.peach.main);
+                if(expenseTrendChart) expenseTrendChart.destroy();
+                expenseTrendChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Total Expenses', data: financialHistory.map(d => d.totalExpenses), borderColor: chartColors.orange.main, backgroundColor: orangeGradient, fill: true, tension: 0.3 }] }, options: { ...chartOptions, plugins: { legend: { display: false } }, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, beginAtZero: true } } } });
+            }
+
+            function renderRunwayChart() {
+                const runwaySummaryEl = document.getElementById('runway-summary');
+                if (!projectionsData.length) {
+                    runwaySummaryEl.innerHTML = `<p>Not enough data to project runway.</p>`;
+                    return;
+                }
+
+                const currentWeekIndex = getCurrentWeekIndex();
+                const runwayData = [];
+                const runwayLabels = [];
+                let runwayInMonths = Infinity;
+
+                const futureProjections = projectionsData.slice(currentWeekIndex);
+
+                let weeksToZero = -1;
+                for (let i = 0; i < futureProjections.length; i++) {
+                    if (futureProjections[i].endingBalance <= 0) {
+                        weeksToZero = i;
+                        break;
+                    }
+                }
+
+                if (weeksToZero !== -1) {
+                    runwayInMonths = (weeksToZero / 4.33).toFixed(1);
+                }
+
+                const chartDataPoints = 52; // Show about a year of weekly data
+                for (let i = 0; i < chartDataPoints && (currentWeekIndex + i) < projectionsData.length; i++) {
+                    const weekData = projectionsData[currentWeekIndex + i];
+                    runwayData.push(weekData.endingBalance);
+                    runwayLabels.push(`W${weekData.week}`);
+                }
+                
+                const avgWeeklyNet = futureProjections.slice(0, 4).reduce((sum, week) => sum + (week.income - week.payroll - week.overhead - week.construction), 0) / 4;
+                const avgMonthlyBurn = -avgWeeklyNet * 4.33;
+
+
+                runwaySummaryEl.innerHTML = `
+                    <div class="text-sm">
+                        <span class="text-gray-400">Est. Runway:</span>
+                        <span class="font-bold text-lg ${runwayInMonths < 4 ? 'text-red-400' : 'text-green-400'}">
+                            ${isFinite(runwayInMonths) ? `${runwayInMonths} months` : 'Infinite 👍'}
+                        </span>
+                    </div>
+                     <div class="text-sm">
+                        <span class="text-gray-400">Projected Burn:</span>
+                        <span class="font-bold text-white">${formatCurrency(avgMonthlyBurn > 0 ? avgMonthlyBurn : 0)}/mo</span>
+                    </div>
+                `;
+
+                const ctx = document.getElementById('runwayChart').getContext('2d');
+                if (runwayChart) runwayChart.destroy();
+
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, 'rgba(74, 222, 128, 0.4)'); // Green
+                gradient.addColorStop(0.5, 'rgba(250, 204, 21, 0.2)'); // Yellow
+                gradient.addColorStop(1, 'rgba(248, 113, 113, 0.3)'); // Red
+
+                runwayChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: runwayLabels,
+                        datasets: [{
+                            label: 'Projected Cash Balance',
+                            data: runwayData,
+                            borderColor: '#a78bfa',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        plugins: {
+                            ...chartOptions.plugins,
+                            legend: { display: false },
+                             annotation: {
+                                annotations: {
+                                    zeroLine: {
+                                        type: 'line',
+                                        yMin: 0,
+                                        yMax: 0,
+                                        borderColor: 'rgba(239, 68, 68, 0.7)',
+                                        borderWidth: 2,
+                                        borderDash: [6, 6],
+                                        label: {
+                                            content: 'Zero Cash',
+                                            enabled: true,
+                                            position: 'start',
+                                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                                            font: { size: 10 }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function populateExpenseDropdown() {
+                expensePeriodSelector.innerHTML = '';
+                financialHistory.forEach((data, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = data.period.label;
+                    expensePeriodSelector.appendChild(option);
+                });
+                expensePeriodSelector.selectedIndex = financialHistory.length - 1;
+            }
+
+            function renderExpenseDetails(periodIndex) {
+                expenseDetailsContainer.innerHTML = '';
+                const data = financialHistory[periodIndex];
+                if (!data || !data.expenses) return;
+                if (Object.keys(data.expenses).length === 0) {
+                     expenseDetailsContainer.innerHTML = `<p class="text-gray-400">No detailed expenses found for this period.</p>`;
+                     return;
+                }
+                Object.entries(data.expenses).forEach(([category, amount]) => {
+                    const el = document.createElement('div');
+                    el.className = 'flex justify-between items-center bg-gray-800/50 p-3 rounded-md';
+                    el.innerHTML = `<span class="text-gray-300">${category}</span><span class="font-semibold text-white">${formatCurrency(amount)}</span>`;
+                    expenseDetailsContainer.appendChild(el);
+                });
+                const totalEl = document.createElement('div');
+                totalEl.className = 'flex justify-between items-center bg-gray-900/50 p-3 rounded-md mt-4 border-t-2 border-indigo-500';
+                totalEl.innerHTML = `<span class="font-bold text-indigo-300">Total Expenses</span><span class="font-bold text-lg text-white">${formatCurrency(data.totalExpenses)}</span>`;
+                expenseDetailsContainer.appendChild(totalEl);
+            }
+
+            // --- PROJECTIONS TABLE LOGIC ---
+            function getCalendarStartDate(year) {
+                let firstDayOfYear = new Date(year, 0, 1);
+                let dayOfWeek = firstDayOfYear.getDay();
+                let daysToSubtract = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+                let startDate = new Date(firstDayOfYear);
+                startDate.setDate(firstDayOfYear.getDate() - daysToSubtract);
+                return startDate;
+            }
+
+            function getCurrentWeekIndex() {
+                if (!calendarStartDate) return 0;
+                const today = new Date();
+                const diffTime = Math.abs(today - calendarStartDate);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                return Math.floor(diffDays / 7);
+            }
+
+            function scrollToWeek(weekIndex) {
+                const targetRow = projectionsBody.querySelector(`tr[data-week="${weekIndex - 1}"]`);
+                if (targetRow) {
+                    const tableWrapper = document.querySelector('.projections-table-wrapper');
+                    const rowLeft = targetRow.offsetLeft;
+                    tableWrapper.scrollTo({
+                        left: rowLeft,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            function loadProjections() {
+                const year = 2025;
+                calendarStartDate = getCalendarStartDate(year);
+
+                const savedData = localStorage.getItem('projectionsData');
+                if (savedData) {
+                    projectionsData = JSON.parse(savedData);
+                } else {
+                    projectionsData = Array.from({ length: 52 }, (_, i) => ({
+                        week: i + 1,
+                        days: { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: [] },
+                        income: 0, payroll: 0, overhead: 0, construction: 0,
+                        beginningBalance: (i === 0) ? 50000 : 0,
+                        endingBalance: 0
+                    }));
+                }
+                updateCalculationsAndRender(0);
+                
+                setTimeout(() => {
+                    scrollToWeek(getCurrentWeekIndex());
+                }, 100);
+            }
+
+            function saveProjections() {
+                localStorage.setItem('projectionsData', JSON.stringify(projectionsData));
+            }
+
+            function renderProjectionsTable() {
+                projectionsBody.innerHTML = '';
+                let currentDate = new Date(calendarStartDate);
+                const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
+                const currentWeekIndex = getCurrentWeekIndex();
+
+                projectionsData.forEach((weekData, weekIndex) => {
+                    const row = document.createElement('tr');
+                    row.dataset.week = weekIndex;
+                    
+                    const isPastWeek = weekIndex < currentWeekIndex - 1;
+                    if (isPastWeek) {
+                        row.classList.add('past-week');
+                        if (pastWeeksCollapsed) {
+                            row.classList.add('week-collapsed');
+                        }
+                    }
+
+                    if (weekIndex === currentWeekIndex) {
+                        row.classList.add('current-week-row');
+                    }
+                    row.innerHTML += `<td class="week-col">${weekData.week}</td>`;
+
+                    for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
+                        const dayCell = document.createElement('td');
+                        dayCell.className = 'day-cell';
+                        const dateDisplay = document.createElement('div');
+                        dateDisplay.className = 'date-display';
+                        dateDisplay.textContent = `${monthFormatter.format(currentDate)} ${currentDate.getDate()}`;
+                        dayCell.appendChild(dateDisplay);
+
+                        const incomeList = document.createElement('ul');
+                        (weekData.days[day] || []).forEach((item, itemIndex) => {
+                            const li = document.createElement('li');
+                            
+                            const detailsDiv = document.createElement('div');
+                            detailsDiv.className = 'income-item-details';
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'income-item-name';
+                            nameSpan.textContent = item.name;
+                            
+                            const amountSpan = document.createElement('span');
+                            amountSpan.className = 'income-item-amount';
+                            amountSpan.textContent = formatCurrency(item.amount);
+                            
+                            detailsDiv.appendChild(nameSpan);
+                            detailsDiv.appendChild(amountSpan);
+                            li.appendChild(detailsDiv);
+
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'delete-income-btn';
+                            deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
+                            deleteBtn.dataset.weekIndex = weekIndex;
+                            deleteBtn.dataset.day = day;
+                            deleteBtn.dataset.itemIndex = itemIndex;
+                            li.appendChild(deleteBtn);
+
+                            incomeList.appendChild(li);
+                        });
+                        dayCell.appendChild(incomeList);
+
+                        const addButton = document.createElement('button');
+                        addButton.className = 'add-income-btn';
+                        addButton.innerHTML = `+ Add`;
+                        addButton.dataset.weekIndex = weekIndex;
+                        addButton.dataset.day = day;
+                        dayCell.appendChild(addButton);
+                        row.appendChild(dayCell);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+
+                    row.innerHTML += `
+                        <td class="financial-col income-cell">${formatCurrency(weekData.income)}</td>
+                        <td class="financial-col" contenteditable="true" data-field="payroll">${formatCurrency(weekData.payroll)}</td>
+                        <td class="financial-col" contenteditable="true" data-field="overhead">${formatCurrency(weekData.overhead)}</td>
+                        <td class="financial-col" contenteditable="true" data-field="construction">${formatCurrency(weekData.construction)}</td>
+                        <td class="financial-col beginning-balance-cell">${formatCurrency(weekData.beginningBalance)}</td>
+                        <td class="financial-col ending-balance-cell">${formatCurrency(weekData.endingBalance)}</td>
+                    `;
+                    projectionsBody.appendChild(row);
+                });
+            }
+            
+            function updateCalculationsAndRender(changedWeekIndex = 0) {
+                const startIdx = parseInt(changedWeekIndex, 10);
+                for (let i = startIdx; i < projectionsData.length; i++) {
+                    const weekData = projectionsData[i];
+                    let totalIncome = 0;
+                    Object.values(weekData.days).forEach(dayEntries => {
+                        dayEntries.forEach(item => { totalIncome += item.amount; });
+                    });
+                    weekData.income = totalIncome;
+                    if (i > 0) {
+                        weekData.beginningBalance = projectionsData[i - 1].endingBalance;
+                    }
+                    weekData.endingBalance = weekData.beginningBalance + weekData.income - weekData.payroll - weekData.overhead - weekData.construction;
+                }
+                saveProjections();
+                renderProjectionsTable();
+                renderRunwayChart(); // Update runway chart whenever data changes
+            }
+
+            function addIncome(weekIndex, day) {
+                const modal = document.getElementById('income-modal-overlay');
+                const nameInput = document.getElementById('income-property-name');
+                const amountInput = document.getElementById('income-amount');
+                
+                modal.dataset.weekIndex = weekIndex;
+                modal.dataset.day = day;
+                
+                nameInput.value = '';
+                amountInput.value = '';
+                nameInput.style.border = '';
+                amountInput.style.border = '';
+
+                modal.style.display = 'flex';
+                nameInput.focus();
+            }
+
+            function deleteIncome(weekIndex, day, itemIndex) {
+                if (projectionsData[weekIndex] && projectionsData[weekIndex].days[day]) {
+                    projectionsData[weekIndex].days[day].splice(itemIndex, 1);
+                    updateCalculationsAndRender(weekIndex);
+                }
+            }
+            
+            function saveIncomeFromModal() {
+                const modal = document.getElementById('income-modal-overlay');
+                const weekIndex = parseInt(modal.dataset.weekIndex, 10);
+                const day = modal.dataset.day;
+                const nameInput = document.getElementById('income-property-name');
+                const amountInput = document.getElementById('income-amount');
+                const name = nameInput.value.trim();
+                const amount = parseFloat(amountInput.value);
+
+                nameInput.style.border = '';
+                amountInput.style.border = '1px solid #4b5563';
+
+                let isValid = true;
+                if (!name) {
+                    nameInput.style.border = '1px solid red';
+                    isValid = false;
+                }
+                if (isNaN(amount)) {
+                    amountInput.style.border = '1px solid red';
+                    isValid = false;
+                }
+
+                if (!isValid || isNaN(weekIndex)) {
+                    return;
+                }
+                
+                if (!projectionsData[weekIndex].days[day]) {
+                    projectionsData[weekIndex].days[day] = [];
+                }
+                projectionsData[weekIndex].days[day].push({ name, amount });
+                updateCalculationsAndRender(weekIndex);
+                closeIncomeModal();
+            }
+            
+            function closeIncomeModal() {
+                document.getElementById('income-modal-overlay').style.display = 'none';
+            }
+
+            // --- EVENT DELEGATION FOR DYNAMIC CONTENT ---
+            projectionsBody.addEventListener('click', (e) => {
+                const addButton = e.target.closest('.add-income-btn');
+                const deleteButton = e.target.closest('.delete-income-btn');
+
+                if (addButton) {
+                    const { weekIndex, day } = addButton.dataset;
+                    if (weekIndex !== undefined && day !== undefined) {
+                        addIncome(weekIndex, day);
+                    }
+                }
+
+                if (deleteButton) {
+                    const { weekIndex, day, itemIndex } = deleteButton.dataset;
+                     if (weekIndex !== undefined && day !== undefined && itemIndex !== undefined) {
+                        deleteIncome(parseInt(weekIndex), day, parseInt(itemIndex));
+                    }
+                }
+            });
+
+            projectionsBody.addEventListener('blur', (e) => {
+                if (e.target.hasAttribute('contenteditable')) {
+                    const weekIndex = parseInt(e.target.closest('tr').dataset.week, 10);
+                    const field = e.target.dataset.field;
+                    const value = parseCurrency(e.target.textContent);
+                    if (!isNaN(value) && !isNaN(weekIndex) && projectionsData[weekIndex].hasOwnProperty(field)) {
+                        projectionsData[weekIndex][field] = value;
+                        updateCalculationsAndRender(weekIndex);
+                    } else {
+                        renderProjectionsTable();
+                    }
+                }
+            }, true);
+
+            // --- GEMINI AI CFO ---
+            async function getAIFinancialInsights() {
+                generateInsightsBtn.disabled = true;
+                aiInsightsContainer.innerHTML = '<p>Your AI CFO is analyzing the data... please wait.</p>';
+
+                const dataSummary = financialHistory.map(d => 
+                    `Month: ${d.period.label}\n` +
+                    `Total Revenue: ${d.totalRevenue.toFixed(2)}\n` +
+                    `Total Expenses: ${d.totalExpenses.toFixed(2)}\n` +
+                    `Net Income: ${d.netIncome.toFixed(2)}\n` +
+                    `Expense Breakdown:\n${Object.entries(d.expenses).map(([key, val]) => `  - ${key}: ${val.toFixed(2)}`).join('\n')}`
+                ).join('\n\n');
+
+                const prompt = `
+                    You are an expert fractional CFO for a small business. Your tone is professional, insightful, and encouraging.
+                    Analyze the following financial data for the past few months. Provide actionable feedback and suggestions.
+                    
+                    Your response must be formatted with the following sections, using the exact headings with H4 tags:
+                    <h4>Overall Performance Summary</h4>
+                    <h4>Key Observations & Trends</h4>
+                    <h4>Actionable Recommendations</h4>
+
+                    Under each heading, use paragraphs and bulleted lists. Do not use markdown like ** or #.
+
+                    Financial Data:
+                    ${dataSummary}
+                `;
+                
+                try {
+                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        aiInsightsContainer.innerHTML = text;
+                    } else {
+                        aiInsightsContainer.innerHTML = '<p class="text-red-400">Sorry, the AI CFO could not generate insights at this time. Please check the data and try again.</p>';
+                    }
+
+                } catch (error) {
+                    console.error('Error calling Gemini API:', error);
+                    aiInsightsContainer.innerHTML = `<p class="text-red-400">An error occurred while contacting the AI CFO. Please check the console for details.</p>`;
+                } finally {
+                    generateInsightsBtn.disabled = false;
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+            window.onload = () => {
+                initCharts();
+                loadProjections();
+            };
+            expensePeriodSelector.addEventListener('change', (e) => renderExpenseDetails(e.target.value));
+            generateInsightsBtn.addEventListener('click', getAIFinancialInsights);
+            showCurrentWeekBtn.addEventListener('click', () => scrollToWeek(getCurrentWeekIndex()));
+            togglePastWeeksBtn.addEventListener('click', () => {
+                pastWeeksCollapsed = !pastWeeksCollapsed;
+                renderProjectionsTable();
+            });
+            
+            logoUploadArea.addEventListener('click', () => logoUploader.click());
+            logoUploader.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => { companyLogo.src = e.target.result; companyLogo.alt = file.name; };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            aiFab.addEventListener('click', () => aiChatWindow.classList.toggle('open'));
+            closeChatBtn.addEventListener('click', () => aiChatWindow.classList.remove('open'));
+            document.getElementById('analytics-section').querySelector('.collapsible-header').addEventListener('click', (e) => {
+                e.currentTarget.parentElement.classList.toggle('collapsed');
+            });
+
+            document.getElementById('income-modal-save').addEventListener('click', saveIncomeFromModal);
+            document.getElementById('income-modal-cancel').addEventListener('click', closeIncomeModal);
+            document.getElementById('income-modal-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'income-modal-overlay') closeIncomeModal();
+            });
+        });
+
+    </script>
+</body>
+</html>

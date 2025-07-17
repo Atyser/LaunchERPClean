@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Project Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark-start: #0d142b;
+            --bg-dark-end: #111827;
+            --card-bg: rgba(26, 32, 53, 0.7);
+            --card-bg-light: rgba(30, 41, 59, 0.8);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --accent-indigo-start: #4f46e5;
+            --accent-green: #10b981;
+            /* Monochromatic Blue Scheme */
+            --accent-blue-100: rgba(96, 165, 250, 0.5); 
+            --accent-blue-200: rgba(59, 130, 246, 0.5);
+            --accent-blue-300: rgba(37, 99, 235, 0.5);
+            --accent-blue-400: rgba(29, 78, 216, 0.5);
+            --accent-green-start: rgba(16, 185, 129, 0.5);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark-start);
+            background-image: linear-gradient(to br, var(--bg-dark-start), var(--bg-dark-end));
+            color: var(--text-primary);
+        }
+        .table-input, .table-select {
+            background-color: transparent;
+            width: 100%;
+            border: 1px solid transparent;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: border-color 0.2s;
+            color: var(--text-primary);
+        }
+        .table-input:focus, .table-select:focus {
+            outline: none;
+            border-color: var(--accent-indigo-start);
+        }
+        tbody tr:hover .table-input, tbody tr:hover .table-select {
+            border-color: rgba(255,255,255,0.2);
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+        .project-section {
+            margin-bottom: 2rem;
+        }
+        .section-tab {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            font-weight: 600;
+            position: relative;
+            bottom: -1px;
+            z-index: 10;
+        }
+        .section-content {
+            border-radius: 0.5rem;
+            border-top-left-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            background-color: var(--card-bg-light);
+        }
+        .section-table {
+            background-color: transparent;
+            table-layout: fixed; /* Ensures widths are respected */
+        }
+        
+        .dragging {
+            opacity: 0.6;
+            background: rgba(79, 70, 229, 0.2);
+        }
+        .drag-over .section-content {
+            box-shadow: 0 0 0 3px var(--accent-indigo-start);
+        }
+
+        /* Color Variants */
+        .tab-In-Pipeline { background-color: var(--accent-blue-100); color: white; }
+        .border-In-Pipeline { border: 1px solid var(--accent-blue-100); }
+        .tab-Under-Renovation { background-color: var(--accent-blue-200); color: white; }
+        .border-Under-Renovation { border: 1px solid var(--accent-blue-200); }
+        .tab-Listed { background-color: var(--accent-blue-300); color: white; }
+        .border-Listed { border: 1px solid var(--accent-blue-300); }
+        .tab-In-Escrow { background-color: var(--accent-blue-400); color: white; }
+        .border-In-Escrow { border: 1px solid var(--accent-blue-400); }
+        .tab-Closed { background-color: var(--accent-green-start); color: white; }
+        .border-Closed { border: 1px solid var(--accent-green-start); }
+        
+        .add-project-btn {
+            background-color: rgba(255,255,255,0.05);
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            transition: background-color 0.2s, color 0.2s;
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0.75rem;
+            font-weight: 500;
+        }
+        .add-project-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+        select option {
+            background: var(--bg-dark-end);
+            color: var(--text-primary);
+        }
+        .chart-container {
+            background-color: var(--card-bg-light);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            max-height: 400px;
+        }
+        .table-header th {
+            position: sticky;
+            top: 0;
+            background-color: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(5px);
+        }
+        .section-footer td {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .details-container {
+            transition: max-height 0.5s ease-in-out;
+        }
+        .bid-sheet-table .approved {
+            background-color: rgba(16, 185, 129, 0.15);
+        }
+        .bid-sheet-table .approved:hover {
+            background-color: rgba(16, 185, 129, 0.25);
+        }
+        .approve-checkbox:checked {
+            accent-color: var(--accent-green);
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-white">Projects Dashboard</h1>
+            <p class="text-gray-400 mt-1">Live overview of all ongoing construction projects.</p>
+        </header>
+
+        <div class="grid grid-cols-1 gap-6 mb-8">
+            <div class="chart-container">
+                <h2 class="text-lg font-semibold text-white mb-4">Total Projected Profit by Status</h2>
+                <canvas id="projectProfitChart"></canvas>
+            </div>
+        </div>
+
+
+        <div id="project-board">
+            <!-- Project sections will be injected here -->
+        </div>
+
+        <div class="bg-gray-800 rounded-xl shadow-md overflow-x-auto mt-8 border border-gray-700">
+             <table class="min-w-full text-sm" style="table-layout: fixed;">
+                <tfoot class="bg-gray-900/50 font-semibold text-white">
+                    <tr>
+                        <td class="px-4 py-3 text-right font-bold text-lg" style="width: 73%;">Grand Totals</td>
+                        <td id="total-budgeted-profit" class="px-4 py-3 text-right font-bold text-lg" style="width: 13.5%;"></td>
+                        <td id="total-projected-profit" class="px-4 py-3 text-right font-bold text-lg" style="width: 13.5%;"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let projectData = [
+            { id: 1, status: "Under Renovation", address: "829 B St Lincoln NE - Russel (1040)", lender: "Quickdraw", phase: "26. Final Clearing", originalARV: 185000, estimatedARV: 185000, 
+              bidSheet: [
+                {phase: "Junk Removal and Demo", days: 3, originalLabor: 1500, originalMaterial: 800, actualLabor: 1600, actualMaterial: 850, approved: true},
+                {phase: "Exterior Major Projects", days: 7, originalLabor: 3500, originalMaterial: 1500, actualLabor: 3600, actualMaterial: 1550, approved: true},
+                {phase: "Structural Alterations/Framing", days: 10, originalLabor: 12500, originalMaterial: 3500, actualLabor: 12500, actualMaterial: 3700, approved: true},
+                {phase: "Utility and Fixture Installations/Repairs", days: 10, originalLabor: 2500, originalMaterial: 250, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Major Drywall Installation", days: 10, originalLabor: 3000, originalMaterial: 500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Minor Drywall repair/installation", days: 7, originalLabor: 2500, originalMaterial: 250, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Door repair/replace", days: 3, originalLabor: 1500, originalMaterial: 1500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Trim installation/repair/preparation", days: 3, originalLabor: 1500, originalMaterial: 1500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Caulk", days: 2, originalLabor: 1000, originalMaterial: 100, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Interior Painting", days: 10, originalLabor: 4500, originalMaterial: 1500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Kitchen Renovation", days: 9, originalLabor: 6200, originalMaterial: 2800, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Bathroom Renovations", days: 5, originalLabor: 2500, originalMaterial: 1500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Electrical updating", days: 2, originalLabor: 1500, originalMaterial: 500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Flooring LVP 12x24 tile", days: 10, originalLabor: 4500, originalMaterial: 3500, actualLabor: 0, actualMaterial: 0, approved: false},
+                {phase: "Finishing Touches after flooring", days: 5, originalLabor: 2500, originalMaterial: 500, actualLabor: 0, actualMaterial: 0, approved: false},
+              ]
+            },
+            { id: 2, status: "Under Renovation", address: "2014 Josephine Bellevue NE (0214)", lender: "Liquid Lending", phase: "10. Interior Painting", originalBudget: 211050.00, currentSpend: 183855.81, originalARV: 255000, estimatedARV: 255000, bidSheet: [] },
+            { id: 3, status: "Under Renovation", address: "307 S 68th Omaha (2706)", lender: "Launch Lending", phase: "20. Flooring", originalBudget: 305000.00, currentSpend: 286801.74, originalARV: 375000, estimatedARV: 375000, bidSheet: [] },
+        ];
+        
+        const statuses = ["In Pipeline", "Under Renovation", "Listed", "In Escrow", "Closed"];
+        const lenders = ["Quickdraw", "Liquid Lending", "Launch Lending", "Vincent", "ITM"];
+        const phases = [ "26. Final Clearing", "10. Interior Painting", "20. Flooring", "24. Punch list Inspec...", "1. Junk Removal", "18. Kitchen", "11. Kitchen Cabinets", "8. Trim"];
+        const statusColors = {
+            "In Pipeline": 'rgba(96, 165, 250, 0.5)',
+            "Under Renovation": 'rgba(59, 130, 246, 0.5)',
+            "Listed": 'rgba(37, 99, 235, 0.5)',
+            "In Escrow": 'rgba(29, 78, 216, 0.5)',
+            "Closed": 'rgba(16, 185, 129, 0.5)'
+        };
+        const statusColorsSolid = {
+            "In Pipeline": 'rgba(96, 165, 250, 1)',
+            "Under Renovation": 'rgba(59, 130, 246, 1)',
+            "Listed": 'rgba(37, 99, 235, 1)',
+            "In Escrow": 'rgba(29, 78, 216, 1)',
+            "Closed": 'rgba(16, 185, 129, 1)'
+        };
+
+        const projectBoard = document.getElementById('project-board');
+        let profitChart;
+        let chartInstances = {};
+        
+        const formatCurrency = (value) => {
+            if (value === null || isNaN(value) || value === '') return '';
+            return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        };
+        
+        const parseCurrency = (value) => {
+             if (typeof value === 'string') {
+                return parseFloat(value.replace(/[^0-9.-]+/g,"")) || 0;
+            }
+            return value || 0;
+        }
+
+        const renderBoard = () => {
+            projectBoard.innerHTML = '';
+            
+            statuses.forEach(status => {
+                const projectsInStatus = projectData.filter(p => p.status === status);
+                
+                const section = document.createElement('div');
+                section.className = 'project-section';
+                section.dataset.status = status;
+
+                const totalProfit = projectsInStatus.reduce((sum, p) => sum + ((p.estimatedARV || 0) - (p.currentSpend || 0)), 0);
+
+                section.innerHTML = `
+                    <div class="section-tab tab-${status.replace(/\s+/g, '-')}">
+                        <span>${status} (${projectsInStatus.length})</span>
+                        <span class="font-normal text-sm opacity-80 ml-2">${formatCurrency(totalProfit)}</span>
+                    </div>
+                    <div class="section-content border-${status.replace(/\s+/g, '-')}">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left text-primary section-table">
+                                <thead class="table-header">
+                                     <tr class="border-b border-gray-700">
+                                        <th class="px-4 py-3 font-medium text-secondary" style="width: 8%;">Date</th>
+                                        <th class="px-4 py-3 font-medium text-secondary" style="width: 27%;">Address</th>
+                                        <th class="px-4 py-3 font-medium text-secondary" style="width: 10%;">Lender</th>
+                                        <th class="px-4 py-3 font-medium text-secondary" style="width: 15%;">Phase</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 6%;">Budget</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 6%;">Spend</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 6%;">Orig. ARV</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 6%;">Est. ARV</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 8%;">Budgeted Profit</th>
+                                        <th class="px-4 py-3 font-medium text-secondary text-right" style="width: 8%;">Projected Profit</th>
+                                        <th class="px-4 py-3 font-medium text-secondary" style="width: 4%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                                <tfoot></tfoot>
+                            </table>
+                        </div>
+                        <button class="add-project-btn">＋ Add Project</button>
+                    </div>
+                `;
+
+                const tableBody = section.querySelector('tbody');
+                const tableFooter = section.querySelector('tfoot');
+
+                if (projectsInStatus.length > 0) {
+                    projectsInStatus.forEach(project => {
+                        const rows = createRow(project);
+                        rows.forEach(r => tableBody.appendChild(r));
+                    });
+                } else {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `<td colspan="11" class="text-center text-gray-500 py-8">Drag projects here</td>`;
+                    tableBody.appendChild(emptyRow);
+                }
+                
+                const footerRow = createFooterRow(projectsInStatus);
+                tableFooter.appendChild(footerRow);
+
+
+                projectBoard.appendChild(section);
+                section.querySelector('.add-project-btn').addEventListener('click', () => addProject(status));
+            });
+            updateAllCalculations();
+            addDragDropListeners();
+            renderCharts();
+        };
+
+        const createRow = (project) => {
+            const row = document.createElement('tr');
+            row.className = 'border-t border-gray-700 hover:bg-gray-800/50';
+            row.draggable = true;
+            row.dataset.projectId = project.id;
+            
+            const createCurrencyCell = (field, value) => `
+                <td class="px-4 py-2">
+                    <input type="text" class="table-input text-right" data-field="${field}" 
+                           onfocus="handleFocus(event)" onblur="handleBlur(event)" 
+                           value="${formatCurrency(value)}">
+                </td>
+            `;
+
+            row.innerHTML = `
+                <td class="px-4 py-2"><input type="date" class="table-input" data-field="renovationDate" value="${project.renovationDate || ''}"></td>
+                <td class="px-4 py-2"><input type="text" class="table-input" data-field="address" value="${project.address || ''}"></td>
+                <td class="px-4 py-2">
+                    <select class="table-select" data-field="lender">
+                        <option value=""></option>
+                        ${lenders.map(l => `<option value="${l}" ${project.lender === l ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                </td>
+                <td class="px-4 py-2">
+                     <select class="table-select" data-field="phase">
+                        <option value=""></option>
+                        ${phases.map(p => `<option value="${p}" ${project.phase === p ? 'selected' : ''}>${p}</option>`).join('')}
+                    </select>
+                </td>
+                ${createCurrencyCell('originalBudget', project.originalBudget)}
+                ${createCurrencyCell('currentSpend', project.currentSpend)}
+                ${createCurrencyCell('originalARV', project.originalARV)}
+                ${createCurrencyCell('estimatedARV', project.estimatedARV)}
+                <td class="px-4 py-2 text-right" data-field="budgetedProfit"></td>
+                <td class="px-4 py-2 text-right font-bold" data-field="projectedProfit"></td>
+                <td class="px-4 py-2 text-center">
+                    <button class="expand-details-btn p-1 rounded-full hover:bg-gray-700">
+                        <svg class="w-4 h-4 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                    </button>
+                </td>
+            `;
+            const detailsRow = document.createElement('tr');
+            detailsRow.className = 'details-container hidden';
+            detailsRow.innerHTML = `<td colspan="11" class="p-4 bg-gray-900/50">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div class="md:col-span-3">
+                        <h4 class="font-semibold mb-2 text-indigo-300">Bid Sheet</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-xs bid-sheet-table">
+                               <thead class="bg-gray-800/50">
+                                    <tr>
+                                        <th class="p-2 w-1/4">Phase Description</th>
+                                        <th class="p-2 text-center" style="width: 5%;">Days</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Original Labor</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Original Material</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Original Total</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Actual Labor</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Actual Material</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Actual Total</th>
+                                        <th class="p-2 text-right" style="width: 10%;">Variance</th>
+                                        <th class="p-2 text-center" style="width: 5%;">Approved</th>
+                                        <th class="p-2 text-center" style="width: 5%;"></th>
+                                    </tr>
+                               </thead>
+                               <tbody></tbody>
+                               <tfoot></tfoot>
+                            </table>
+                        </div>
+                         <button class="add-phase-btn mt-2 text-indigo-400 hover:text-indigo-300 text-xs font-semibold">+ Add Phase</button>
+                    </div>
+                    <div class="md:col-span-2 space-y-4">
+                         <div>
+                            <h4 class="font-semibold mb-2 text-indigo-300">Total Spend vs Budget</h4>
+                            <div class="h-32"><canvas class="total-spend-chart"></canvas></div>
+                         </div>
+                         <div>
+                            <h4 class="font-semibold mb-2 text-indigo-300">Material Spend vs Budget</h4>
+                            <div class="h-32"><canvas class="material-spend-chart"></canvas></div>
+                         </div>
+                          <div>
+                            <h4 class="font-semibold mb-2 text-indigo-300">Labor Spend vs Budget</h4>
+                            <div class="h-32"><canvas class="labor-spend-chart"></canvas></div>
+                         </div>
+                    </div>
+                </div>
+            </td>`;
+            
+            return [row, detailsRow];
+        };
+        
+        const createFooterRow = (projects) => {
+            const footerRow = document.createElement('tr');
+            footerRow.className = 'border-t-2 border-gray-600 section-footer';
+
+            const totals = projects.reduce((acc, p) => {
+                acc.originalBudget += p.originalBudget || 0;
+                acc.currentSpend += p.currentSpend || 0;
+                acc.originalARV += p.originalARV || 0;
+                acc.estimatedARV += p.estimatedARV || 0;
+                acc.budgetedProfit += (p.originalARV || 0) - (p.originalBudget || 0);
+                acc.projectedProfit += (p.estimatedARV || 0) - (p.currentSpend || 0);
+                return acc;
+            }, { originalBudget: 0, currentSpend: 0, originalARV: 0, estimatedARV: 0, budgetedProfit: 0, projectedProfit: 0 });
+
+            footerRow.innerHTML = `
+                <td colspan="4" class="px-4 py-2 text-right font-bold">Section Totals</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.originalBudget)}</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.currentSpend)}</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.originalARV)}</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.estimatedARV)}</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.budgetedProfit)}</td>
+                <td class="px-4 py-2 text-right">${formatCurrency(totals.projectedProfit)}</td>
+                <td></td>
+            `;
+            return footerRow;
+        }
+        
+        const updateAllCalculations = () => {
+            let grandTotalBudgeted = 0;
+            let grandTotalProjected = 0;
+
+            projectData.forEach(project => {
+                if (project.bidSheet && project.bidSheet.length > 0) {
+                    project.originalBudget = project.bidSheet.reduce((sum, item) => sum + (item.originalLabor || 0) + (item.originalMaterial || 0), 0);
+                    project.currentSpend = project.bidSheet.reduce((sum, item) => sum + (item.actualLabor || 0) + (item.actualMaterial || 0), 0);
+                }
+
+                const budgetedProfit = (project.originalARV || 0) - (project.originalBudget || 0);
+                const projectedProfit = (project.estimatedARV || 0) - (project.currentSpend || 0);
+                
+                const row = document.querySelector(`tr[data-project-id="${project.id}"]`);
+                if(row){
+                    row.querySelector('[data-field="budgetedProfit"]').textContent = formatCurrency(budgetedProfit);
+                    row.querySelector('[data-field="projectedProfit"]').textContent = formatCurrency(projectedProfit);
+                    row.querySelector('input[data-field="originalBudget"]').value = formatCurrency(project.originalBudget);
+                    row.querySelector('input[data-field="currentSpend"]').value = formatCurrency(project.currentSpend);
+                }
+
+                grandTotalBudgeted += budgetedProfit;
+                grandTotalProjected += projectedProfit;
+            });
+
+            document.getElementById('total-budgeted-profit').textContent = formatCurrency(grandTotalBudgeted);
+            document.getElementById('total-projected-profit').textContent = formatCurrency(grandTotalProjected);
+        };
+
+        const addDragDropListeners = () => {
+            let draggingEle = null;
+
+            document.querySelectorAll('tr[data-project-id]').forEach(row => {
+                row.addEventListener('dragstart', (e) => {
+                    draggingEle = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+                row.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                    draggingEle = null;
+                });
+            });
+
+            document.querySelectorAll('.project-section').forEach(section => {
+                section.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    section.classList.add('drag-over');
+                });
+                 section.addEventListener('dragleave', () => {
+                     section.classList.remove('drag-over');
+                });
+                section.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    section.classList.remove('drag-over');
+                    
+                    if (draggingEle) {
+                        const projectId = parseInt(draggingEle.dataset.projectId);
+                        const newStatus = section.dataset.status;
+                        
+                        const project = projectData.find(p => p.id === projectId);
+                        if (project) {
+                            project.status = newStatus;
+                            renderBoard();
+                        }
+                    }
+                });
+            });
+        };
+        
+        const addProject = (status) => {
+            const newId = projectData.length > 0 ? Math.max(...projectData.map(p => p.id)) + 1 : 1;
+            const newProject = {
+                id: newId,
+                status: status,
+                address: "",
+                lender: "",
+                phase: "",
+                originalBudget: 0,
+                currentSpend: 0,
+                originalARV: 0,
+                estimatedARV: 0,
+                bidSheet: [],
+            };
+            projectData.push(newProject);
+            renderBoard();
+        };
+
+        const renderCharts = () => {
+            const chartData = statuses.map(status => {
+                const projectsInStatus = projectData.filter(p => p.status === status);
+                const totalProfit = projectsInStatus.reduce((sum, p) => sum + ((p.estimatedARV || 0) - (p.currentSpend || 0)), 0);
+                return {
+                    profit: totalProfit
+                };
+            });
+
+            const profitCtx = document.getElementById('projectProfitChart').getContext('2d');
+            if(profitChart) profitChart.destroy();
+
+            const chartBackgroundColors = statuses.map(s => {
+                const color = statusColors[s];
+                const solidColor = statusColorsSolid[s];
+                const gradient = profitCtx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, solidColor);
+                gradient.addColorStop(1, color);
+                return gradient;
+            });
+
+            profitChart = new Chart(profitCtx, {
+                type: 'bar',
+                data: {
+                    labels: statuses,
+                    datasets: [{
+                        label: 'Total Projected Profit',
+                        data: chartData.map(d => d.profit),
+                        backgroundColor: chartBackgroundColors,
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { 
+                                color: 'white',
+                                callback: function(value) {
+                                    return '$' + (value / 1000) + 'k';
+                                }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: 'white' },
+                             grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+        
+        const renderSingleSpendChart = (canvas, budget, spend, label1, label2) => {
+            const chartId = canvas.id || `chart-${Date.now()}-${Math.random()}`;
+            canvas.id = chartId;
+            if(chartInstances[chartId]) {
+                chartInstances[chartId].destroy();
+            }
+            const ctx = canvas.getContext('2d');
+            chartInstances[chartId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [''],
+                    datasets: [
+                        { label: label1, data: [budget], backgroundColor: 'rgba(99, 102, 241, 0.6)', borderColor: '#818cf8' },
+                        { label: label2, data: [spend], backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: '#f87171'}
+                    ]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { callback: v => `$${(v/1000).toFixed(0)}k`, color: 'white' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }  }, y: { ticks: { color: 'white' }, grid: { display: false } } }, plugins: {legend: {labels: {color: 'white'}}} }
+            });
+        };
+
+        const renderBidSheet = (detailsRow, project) => {
+            const bidSheetTableBody = detailsRow.querySelector('.bid-sheet-table tbody');
+            const bidSheetTableFooter = detailsRow.querySelector('.bid-sheet-table tfoot');
+            bidSheetTableBody.innerHTML = '';
+            
+            let totals = { origLabor: 0, origMaterial: 0, actualLabor: 0, actualMaterial: 0 };
+
+            project.bidSheet.forEach((item, index) => {
+                const origTotal = item.originalLabor + item.originalMaterial;
+                const actualTotal = item.actualLabor + item.actualMaterial;
+                const variance = actualTotal - origTotal;
+                
+                totals.origLabor += item.originalLabor;
+                totals.origMaterial += item.originalMaterial;
+                totals.actualLabor += item.actualLabor;
+                totals.actualMaterial += item.actualMaterial;
+
+                const row = document.createElement('tr');
+                row.className = `hover:bg-gray-800/50 ${item.approved ? 'approved' : ''}`;
+                row.dataset.phaseIndex = index;
+                row.innerHTML = `
+                    <td class="p-2"><input type="text" class="table-input" data-bid-field="phase" value="${index + 1}. ${item.phase}"></td>
+                    <td class="p-2 text-center"><input type="number" class="table-input text-center" data-bid-field="days" value="${item.days}"></td>
+                    <td class="p-2"><input type="text" class="table-input text-right" data-bid-field="originalLabor" value="${formatCurrency(item.originalLabor)}"></td>
+                    <td class="p-2"><input type="text" class="table-input text-right" data-bid-field="originalMaterial" value="${formatCurrency(item.originalMaterial)}"></td>
+                    <td class="p-2 text-right font-semibold" data-bid-field="originalTotal">${formatCurrency(origTotal)}</td>
+                    <td class="p-2"><input type="text" class="table-input text-right" data-bid-field="actualLabor" value="${formatCurrency(item.actualLabor)}"></td>
+                    <td class="p-2"><input type="text" class="table-input text-right" data-bid-field="actualMaterial" value="${formatCurrency(item.actualMaterial)}"></td>
+                    <td class="p-2 text-right font-semibold" data-bid-field="actualTotal">${formatCurrency(actualTotal)}</td>
+                    <td class="p-2 text-right font-semibold ${variance >= 0 ? 'text-red-400' : 'text-green-400'}">${formatCurrency(variance)}</td>
+                    <td class="p-2 text-center"><input type="checkbox" class="approve-checkbox" data-bid-field="approved" ${item.approved ? 'checked' : ''}></td>
+                    <td class="p-2 text-center"><button class="hide-phase-btn text-red-500 font-bold">-</button></td>
+                `;
+                bidSheetTableBody.appendChild(row);
+            });
+            
+            const totalOrig = totals.origLabor + totals.origMaterial;
+            const totalActual = totals.actualLabor + totals.actualMaterial;
+            const totalVariance = totalActual - totalOrig;
+
+            bidSheetTableFooter.innerHTML = `
+                <tr class="border-t-2 border-gray-600 font-bold">
+                    <td class="p-2 text-right" colspan="2">Totals</td>
+                    <td class="p-2 text-right">${formatCurrency(totals.origLabor)}</td>
+                    <td class="p-2 text-right">${formatCurrency(totals.origMaterial)}</td>
+                    <td class="p-2 text-right">${formatCurrency(totalOrig)}</td>
+                    <td class="p-2 text-right">${formatCurrency(totals.actualLabor)}</td>
+                    <td class="p-2 text-right">${formatCurrency(totals.actualMaterial)}</td>
+                    <td class="p-2 text-right">${formatCurrency(totalActual)}</td>
+                    <td class="p-2 text-right ${totalVariance >= 0 ? 'text-red-400' : 'text-green-400'}">${formatCurrency(totalVariance)}</td>
+                    <td colspan="2"></td>
+                </tr>
+            `;
+
+            renderSpendChart(detailsRow.querySelector('.total-spend-chart'), totalOrig, totalActual, 'Total Budget', 'Total Spend');
+            renderSpendChart(detailsRow.querySelector('.material-spend-chart'), totals.origMaterial, totals.actualMaterial, 'Material Budget', 'Material Spend');
+            renderSpendChart(detailsRow.querySelector('.labor-spend-chart'), totals.origLabor, totals.actualLabor, 'Labor Budget', 'Labor Spend');
+        };
+
+        // --- Event Handlers ---
+        function handleFocus(event) {
+            const input = event.target;
+            const rawValue = parseCurrency(input.value);
+            input.type = 'number';
+            input.value = rawValue === 0 ? '' : rawValue;
+        }
+
+        function handleBlur(event) {
+            const input = event.target;
+            const value = parseFloat(input.value) || 0;
+            input.type = 'text';
+            input.value = formatCurrency(value);
+            updateProjectData(input);
+        }
+
+        function updateProjectData(inputElement) {
+            const row = inputElement.closest('tr[data-project-id]');
+            if (!row) return;
+
+            const projectId = parseInt(row.dataset.projectId);
+            const project = projectData.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const field = inputElement.dataset.field;
+            const value = parseCurrency(inputElement.value);
+
+            if (project[field] !== value) {
+                project[field] = value;
+                updateAllCalculations();
+                renderBoard(); // Re-render to update tab totals
+            }
+        }
+        
+        // --- EVENT DELEGATION ---
+        document.body.addEventListener('change', (e) => {
+            if (e.target.closest('.section-table select')) {
+                updateProjectData(e.target);
+            }
+            if (e.target.closest('.bid-sheet-table')) {
+                const detailsRow = e.target.closest('.details-container');
+                const mainRow = detailsRow.previousElementSibling;
+                const projectId = parseInt(mainRow.dataset.projectId);
+                const project = projectData.find(p => p.id === projectId);
+                const phaseRow = e.target.closest('tr');
+                const phaseIndex = parseInt(phaseRow.dataset.phaseIndex);
+                const field = e.target.dataset.bidField;
+                
+                let value;
+                if (e.target.type === 'checkbox') {
+                    value = e.target.checked;
+                } else {
+                    value = parseCurrency(e.target.value);
+                }
+                
+                project.bidSheet[phaseIndex][field] = value;
+                
+                renderBidSheet(detailsRow, project);
+                updateAllCalculations();
+                renderCharts();
+            }
+        });
+
+        document.body.addEventListener('click', (e) => {
+             if (e.target.closest('.expand-details-btn')) {
+                const button = e.target.closest('.expand-details-btn');
+                const row = button.closest('tr');
+                const detailsRow = row.nextElementSibling;
+                const arrow = button.querySelector('svg');
+
+                detailsRow.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+                
+                if(!detailsRow.classList.contains('hidden')) {
+                    const projectId = parseInt(row.dataset.projectId);
+                    const project = projectData.find(p => p.id === projectId);
+                    renderBidSheet(detailsRow, project);
+                }
+            } else if(e.target.classList.contains('hide-phase-btn')) {
+                e.target.closest('tr').classList.add('hidden');
+            } else if(e.target.classList.contains('add-project-btn')) {
+                const status = e.target.closest('.project-section').dataset.status;
+                addProject(status);
+            }
+        });
+        
+        // --- INITIALIZATION ---
+        renderBoard();
+
+    </script>
+
+</body>
+</html>

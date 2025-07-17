@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Contracts Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-main: #f3f4f6; /* Light Grey Background */
+            --card-bg: #0d142b; /* Dark Blue Card Background */
+            --card-bg-light: rgba(30, 41, 59, 0.8);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-light: #e5e7eb;
+            --text-dark: #111827;
+            --text-secondary-light: #9ca3af;
+            --text-secondary-dark: #6b7280;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #f43f5e;
+            --accent-purple: #8b5cf6;
+            --accent-yellow: #f59e0b;
+            --accent-indigo-start: #4f46e5;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .text-watermark {
+            position: fixed;
+            top: 10px;
+            right: 20px;
+            font-size: 2.2rem;
+            font-weight: 700;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 1000;
+            background: linear-gradient(to right, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .main-header {
+            padding: 10px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #111827;
+            border-bottom: 1px solid #374151;
+            flex-shrink: 0;
+        }
+
+        .main-header nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .main-header nav a {
+            color: var(--text-secondary-light);
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .main-header nav a:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--text-light);
+        }
+        
+        .nav-item {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #1e293b;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0;
+            border: 1px solid var(--border-color);
+        }
+        .dropdown-content a {
+            color: var(--text-light);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            margin-left: 0;
+            border-radius: 0;
+        }
+        .dropdown-content a:hover { 
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        .nav-item:hover .dropdown-content {
+            display: block;
+        }
+        .header-logo-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-left: 30px;
+            background: linear-gradient(to right, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            opacity: 0.6;
+        }
+
+        .chat-bubble {
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .chat-bubble svg {
+            width: 32px;
+            height: 32px;
+            fill: #d1d5db;
+            transition: fill 0.2s ease;
+        }
+        .chat-bubble:hover svg {
+            fill: #ffffff;
+        }
+
+        .chat-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .chat-nav-overlay.visible {
+            display: block;
+        }
+
+        .chat-nav-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background-color: #111827;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: left 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-nav-menu.visible {
+            left: 0;
+        }
+        .chat-nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .chat-nav-header h2 {
+            margin: 0;
+            color: var(--text-light);
+        }
+        #chat-menu-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary-light);
+            font-size: 2rem;
+            cursor: pointer;
+        }
+        .chat-nav-menu ul {
+            list-style: none;
+            padding: 20px;
+            margin: 0;
+        }
+        .chat-nav-menu li a {
+            color: var(--text-secondary-light);
+            text-decoration: none;
+            display: block;
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .chat-nav-menu li a:hover {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+
+        .main-container {
+            transition: margin-right 0.3s ease-in-out;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        /* Collapsible Dashboard Section */
+        .dashboard-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin: 20px;
+            overflow: hidden;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .toggle-arrow {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease-in-out;
+            color: var(--text-light);
+        }
+
+        .dashboard-section.collapsed .toggle-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .dashboard-content {
+            padding: 20px;
+            max-height: 4000px; /* Increased for more content */
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+
+        .dashboard-section.collapsed .dashboard-content {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+
+        /* Leaderboard & Goals Styles */
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .company-goals-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .goal-card {
+            background-color: var(--card-bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .goal-card-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+            color: var(--text-secondary-light);
+            text-align: center;
+        }
+        .goal-progress-bar-container {
+            height: 30px;
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes progress-bar-stripes {
+          from { background-position: 1rem 0; }
+          to { background-position: 0 0; }
+        }
+
+        .goal-progress-bar {
+            height: 100%;
+            background-color: var(--accent-green);
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+            background-size: 1rem 1rem;
+            border-radius: 8px;
+            transition: width 0.6s ease;
+            animation: progress-bar-stripes 1s linear infinite;
+        }
+
+        .goal-progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            font-weight: 700;
+            color: var(--text-light);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+
+        .leaderboard-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .leaderboard-card {
+            background-color: var(--card-bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .leaderboard-card-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+            background-image: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        .leaderboard-card-total {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-top: 15px;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        .leaderboard-total {
+            padding-top: 12px;
+            margin-top: 8px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+        .leaderboard-total .total-label {
+            color: var(--text-secondary-light);
+            font-weight: 500;
+        }
+        .leaderboard-total .total-amount {
+            color: var(--accent-blue);
+        }
+        
+        .chart-filters {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .chart-filters label {
+            font-size: 0.8em; 
+            color: var(--text-secondary-light); 
+            margin-right: 8px;
+        }
+        .chart-filters select, .chart-filters input {
+            background-color: #1f2937; 
+            border: 1px solid var(--border-color); 
+            color: var(--text-light); 
+            border-radius: 6px; 
+            padding: 4px 8px; 
+            font-size: 0.9em;
+        }
+        .custom-date-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .hidden {
+            display: none;
+        }
+
+        .status-group {
+            background-color: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .status-group-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-group-header h1, .status-group-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 700;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        
+        #new-contracts-group h1 { background-image: linear-gradient(to right, var(--accent-green), var(--accent-green-light)); }
+        #dispo-group h2 { background-image: linear-gradient(to right, var(--accent-blue), var(--accent-purple)); }
+        #escrow-group h2 { background-image: linear-gradient(to right, var(--accent-purple), var(--accent-indigo-start)); }
+        #at-risk-group h2 { background-image: linear-gradient(to right, var(--accent-orange), var(--accent-yellow)); }
+        #canceled-group h2 { background-image: linear-gradient(to right, var(--accent-red), var(--accent-orange)); }
+        #closed-group h2 { background-image: linear-gradient(to right, var(--accent-green), var(--accent-green-light)); }
+
+        .sales-agent-section {
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background-color: #374151;
+            overflow: hidden;
+            transition: background-color 0.3s, border 0.3s;
+            border: 2px solid transparent;
+        }
+        .sales-agent-section:last-child {
+             margin-bottom: 0;
+        }
+
+        .sales-agent-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-light);
+            margin: 0;
+            padding: 15px;
+            background-color: #1f2937;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .contracts-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .contracts-table th, .contracts-table td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 8px;
+            text-align: left;
+            white-space: nowrap;
+            vertical-align: top; /* Align content to the top */
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        .contracts-table th {
+            font-size: 0.75em;
+            background-color: rgba(0,0,0,0.2);
+            font-weight: bold;
+            color: var(--text-secondary-light);
+            text-transform: uppercase;
+        }
+        .contracts-table tr:hover td {
+            background-color: rgba(255,255,255,0.03);
+        }
+        
+        /* Note Cell Styling */
+        .note-cell-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .note-checkbox-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .note-checkbox {
+            cursor: pointer;
+            margin: 1px 0;
+        }
+        .note-preview {
+            cursor: pointer;
+            color: var(--text-secondary-light);
+            font-style: italic;
+            flex-grow: 1;
+        }
+        .note-cell-content:hover .note-preview {
+            color: var(--text-light);
+            text-decoration: underline;
+        }
+        .highlight-green {
+            background-color: rgba(16, 185, 129, 0.3);
+        }
+        .highlight-yellow {
+            background-color: rgba(245, 158, 11, 0.3);
+        }
+        .contracts-table tr:hover .highlight-green { background-color: rgba(16, 185, 129, 0.4); }
+        .contracts-table tr:hover .highlight-yellow { background-color: rgba(245, 158, 11, 0.4); }
+
+
+        .table-input, .table-select {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+            padding: 6px 4px;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .table-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.2em;
+        }
+        .table-select option {
+            background-color: var(--bg-dark-end);
+        }
+
+        .table-input:focus, .table-select:focus {
+            background: rgba(0,0,0,0.3);
+            border-color: var(--accent-blue);
+            outline: none;
+        }
+        
+        /* New Action Cell Styles */
+        .actions-cell {
+            text-align: center;
+        }
+
+        .details-btn {
+            background: transparent;
+            border: 1px solid var(--text-secondary-light);
+            color: var(--text-secondary-light);
+            cursor: pointer;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 22px;
+            text-align: center;
+            transition: all 0.2s ease;
+            margin: 2px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .details-btn:hover {
+            background-color: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+        
+        .move-container {
+            position: relative;
+            margin-top: 4px;
+        }
+
+        .move-btn {
+            background: transparent;
+            border: 1px solid var(--text-secondary-light);
+            color: var(--text-secondary-light);
+            cursor: pointer;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .move-btn:hover {
+            background-color: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .move-menu {
+            display: none;
+            position: fixed; /* CORRECTED */
+            background-color: var(--bg-dark-end);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+            width: max-content;
+        }
+
+        .move-menu.visible {
+            display: block;
+        }
+
+        .move-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+
+        .move-menu-item:hover {
+            background-color: var(--accent-blue);
+        }
+        
+        /* Details Panel */
+        #details-panel {
+            position: fixed;
+            top: 0;
+            right: -500px; /* Hidden off-screen */
+            width: 480px;
+            height: 100vh;
+            background-color: var(--bg-dark-end);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: right 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+        #details-panel.visible {
+            right: 0;
+        }
+        .panel-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .panel-header h2 { font-size: 1.25rem; font-weight: 600; color: var(--text-light); margin:0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .panel-close-btn { background: transparent; border: none; color: var(--text-secondary-light); font-size: 1.8rem; cursor: pointer; transition: color 0.2s; }
+        .panel-close-btn:hover { color: var(--text-light); }
+        .panel-content { padding: 20px; overflow-y: auto; flex: 1; }
+        .panel-section { margin-bottom: 25px; }
+        .panel-section-title { font-weight: 600; color: var(--text-secondary-light); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+        .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .panel-field label { display: block; font-size: 0.8rem; color: var(--text-secondary-light); margin-bottom: 4px; }
+        
+        .panel-field input, .panel-field select {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: var(--text-light);
+            box-sizing: border-box;
+        }
+
+        .panel-field select {
+            background-color: #1f2937;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em;
+            padding-right: 2.5rem;
+            transition: background-image 0.2s, border-color 0.2s;
+        }
+
+        .panel-field select.needs-attention {
+            border-color: transparent;
+            background-image: linear-gradient(to right, var(--accent-red), var(--accent-orange)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23FFFFFF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        /* Note Modal Styles */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 199;
+        }
+        #note-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            background-color: var(--bg-dark-end);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 200;
+            display: none;
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-body textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            color: var(--text-primary);
+            box-sizing: border-box;
+            resize: vertical;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+        }
+        .modal-body textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        .modal-footer {
+            padding: 15px 20px;
+            text-align: right;
+            border-top: 1px solid var(--border-color);
+        }
+        .modal-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .modal-button.save {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        .modal-button.save:hover {
+            background-color: #60a5fa;
+        }
+        .modal-button.cancel {
+            background-color: transparent;
+            color: var(--text-secondary);
+            margin-right: 10px;
+        }
+        .modal-button.cancel:hover {
+            color: var(--text-primary);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="chat-nav-overlay" class="chat-nav-overlay"></div>
+    <div id="chat-nav-menu" class="chat-nav-menu">
+        <div class="chat-nav-header">
+            <h2>Channels</h2>
+            <button id="chat-menu-close">&times;</button>
+        </div>
+        <ul>
+            <li><a href="#"># General</a></li>
+            <li><a href="#"># Sales Team</a></li>
+            <li><a href="#"># Construction</a></li>
+            <li><a href="#"># Dispo</a></li>
+            <li><a href="#"># Random</a></li>
+        </ul>
+    </div>
+    <header class="main-header">
+        <div id="chat-bubble" class="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        </div>
+        <nav>
+             <a href="Home.html">Home</a>
+             <a href="Sales.html">Sales</a>
+             <a href="Task-tracker.html">Tasks</a>
+             <a href="dispo.html">Dispo</a>
+             <div class="nav-item">
+                <a href="Transaction.html">Transactions</a>
+                <div class="dropdown-content">
+                    <a href="#">Buyers</a>
+                </div>
+            </div>
+             <div class="nav-item">
+                <a href="construction.html">Construction</a>
+                <div class="dropdown-content">
+                    <a href="#">Construction Summary</a>
+                    <a href="#">Construction Management</a>
+                    <a href="#">Contractor Database</a>
+                </div>
+            </div>
+            <a href="financialsdashboard.html">Financials</a>
+            <div class="header-logo-text">CLARITY</div>
+        </nav>
+    </header>
+    <div class="dashboard-section">
+        <div class="dashboard-header">
+            <h1>Dashboard Analytics</h1>
+            <div class="toggle-arrow">▼</div>
+        </div>
+        <div class="dashboard-content">
+            <!-- All charts and dashboard content goes here -->
+            <div class="dashboard-container">
+                <div class="company-goals-container">
+                    <div class="goal-card">
+                        <h3 class="goal-card-title">Monthly Team Goal</h3>
+                        <div class="goal-progress-bar-container">
+                            <div class="goal-progress-bar" id="monthly-goal-bar"></div>
+                            <span class="goal-progress-text" id="monthly-goal-text"></span>
+                        </div>
+                    </div>
+                    <div class="goal-card">
+                        <h3 class="goal-card-title">Quarterly Team Goal</h3>
+                        <div class="goal-progress-bar-container">
+                            <div class="goal-progress-bar" id="quarterly-goal-bar"></div>
+                            <span class="goal-progress-text" id="quarterly-goal-text"></span>
+                        </div>
+                    </div>
+                    <div class="goal-card">
+                        <h3 class="goal-card-title">Yearly Team Goal</h3>
+                        <div class="goal-progress-bar-container">
+                            <div class="goal-progress-bar" id="yearly-goal-bar"></div>
+                            <span class="goal-progress-text" id="yearly-goal-text"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="leaderboard-charts">
+                    <div class="leaderboard-card">
+                        <h2 class="leaderboard-card-title" id="mtd-title">July Profit</h2>
+                        <div class="chart-container">
+                            <canvas id="mtd-chart"></canvas>
+                        </div>
+                        <div class="leaderboard-card-total" id="mtd-total"></div>
+                    </div>
+                    <div class="leaderboard-card">
+                        <h2 class="leaderboard-card-title" id="qtd-title">Q3 Profit</h2>
+                        <div class="chart-container">
+                            <canvas id="qtd-chart"></canvas>
+                        </div>
+                        <div class="leaderboard-card-total" id="qtd-total"></div>
+                    </div>
+                    <div class="leaderboard-card">
+                        <h2 class="leaderboard-card-title" id="ytd-title">2025 YTD Profit</h2>
+                        <div class="chart-container">
+                            <canvas id="ytd-chart"></canvas>
+                        </div>
+                        <div class="leaderboard-card-total" id="ytd-total"></div>
+                    </div>
+                </div>
+
+                <div class="leaderboard-card">
+                    <h2 class="leaderboard-card-title">Profit by Exit Strategy</h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="exit-strategy-chart"></canvas>
+                    </div>
+                    <div class="leaderboard-total" id="exit-strategy-total"></div>
+                </div>
+                
+                <div class="leaderboard-card">
+                    <div class="chart-filters">
+                         <h2 class="leaderboard-card-title" style="margin-bottom: 0;">Average Profit Per Exit Strategy</h2>
+                         <select id="avg-profit-date-range">
+                            <option value="all-time">All Time</option>
+                            <option value="last-month">Last Month</option>
+                            <option value="last-quarter">Last Quarter</option>
+                            <option value="last-year">Last Year</option>
+                            <option value="ytd">Year to Date</option>
+                            <option value="custom">Custom</option>
+                         </select>
+                    </div>
+                     <div id="avg-profit-custom-range" class="custom-date-range hidden">
+                        <label for="avg-profit-start-date">Start:</label>
+                        <input type="date" id="avg-profit-start-date">
+                        <label for="avg-profit-end-date">End:</label>
+                        <input type="date" id="avg-profit-end-date">
+                    </div>
+                    <div class="chart-container" style="height: 300px; margin-top: 15px;">
+                        <canvas id="avg-profit-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="leaderboard-card">
+                    <h2 class="leaderboard-card-title">Closed Profit by Lead Source</h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="lead-source-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="leaderboard-card">
+                    <div class="chart-filters">
+                         <h2 class="leaderboard-card-title" style="margin-bottom: 0;">Monthly Profit Performance (%)</h2>
+                         <div>
+                            <label for="profit-comparison-strategy-select">Exit Strategy:</label>
+                            <select id="profit-comparison-strategy-select"></select>
+                         </div>
+                    </div>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="profit-comparison-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="main-container">
+        <div class="container">
+            <div id="salesAgentSections"></div>
+        </div>
+    </div>
+
+    <div id="details-panel">
+        <div class="panel-header">
+            <h2 id="panel-title"></h2>
+            <button class="panel-close-btn">&times;</button>
+        </div>
+        <div class="panel-content">
+            <div class="panel-section">
+                <h3 class="panel-section-title">Contract Details</h3>
+                <div class="panel-grid">
+                    <div class="panel-field">
+                        <label for="panel-ipaPicturesStatus">IPA/Pictures Status</label>
+                        <select id="panel-ipaPicturesStatus" data-field="ipaPicturesStatus">
+                            <option value="Needing Scheduled">Needing Scheduled</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="panel-field">
+                        <label for="panel-ipaDateTime">IPA Date & Time</label>
+                        <input type="datetime-local" id="panel-ipaDateTime" data-field="ipaDateTime">
+                    </div>
+                    <div class="panel-field">
+                        <label for="panel-exitStrategy">Exit Strategy</label>
+                        <select id="panel-exitStrategy" data-field="exitStrategy"></select>
+                    </div>
+                    <div class="panel-field">
+                        <label for="panel-disclosures">Disclosures</label>
+                        <select id="panel-disclosures" data-field="disclosures">
+                            <option value="Needing Signed">Needing Signed</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                     <div class="panel-field">
+                        <label for="panel-titleCompany">Title Company</label>
+                        <input type="text" id="panel-titleCompany" data-field="titleCompany">
+                    </div>
+                     <div class="panel-field">
+                        <label for="panel-accessKeys">Access/Keys</label>
+                        <input type="text" id="panel-accessKeys" data-field="accessKeys">
+                    </div>
+                    <div class="panel-field">
+                        <label for="panel-leadSource">Lead Source</label>
+                        <select id="panel-leadSource" data-field="leadSource"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Modal HTML -->
+    <div id="modal-overlay"></div>
+    <div id="note-modal">
+        <div class="modal-header">
+            <h3 id="note-modal-title">Edit Note</h3>
+        </div>
+        <div class="modal-body">
+            <textarea id="note-modal-textarea"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button id="note-modal-cancel" class="modal-button cancel">Cancel</button>
+            <button id="note-modal-save" class="modal-button save">Save & Close</button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const CONTRACTS_STORAGE_KEY = 'twr-contracts';
+            const SALES_AGENTS = ["Brandon", "Colton", "Michael", "Dispo: Sean", "Escrow", "At Risk", "Canceled", "Closed"];
+            const SALES_REPS = ["Brandon", "Colton", "Michael", "Creighton", "Grant"];
+            const LEADERBOARD_AGENTS = ["Brandon", "Colton", "Michael", "Grant"];
+            const EXIT_STRATEGIES = ['Wholetail', 'Light Flip', 'Full Flip', 'Novation', 'Wholesale', 'Sub2', 'Fix & Flip', 'RTO'];
+            const LEAD_SOURCES = ['SEO', 'PPC', 'PPL', 'Direct Mail', 'Radio', 'TV', 'JV', 'Referral', 'United JV', 'Organic SEO -', 'JV Referral', 'Facebook', 'TV Ads'];
+            const COMPANY_GOALS = {
+                month: 200000,
+                quarter: 600000,
+                year: 2400000
+            };
+            let contracts = {};
+            let activeContractId = null;
+            let activeAgent = null;
+            let detailsPanel;
+            let charts = {};
+            let noteModal, modalOverlay, noteModalTitle, noteModalTextarea;
+
+
+            // --- HELPER FUNCTIONS ---
+            function formatCurrencyForDisplay(value) {
+                const number = Number(value);
+                if (value === null || value === undefined || value === '' || isNaN(number)) return '';
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(number);
+            }
+
+            function parseCurrencyFromInput(value) {
+                if (typeof value === 'number') return value;
+                if (typeof value !== 'string') return '';
+                return parseFloat(value.replace(/[^0-9.-]+/g, "")) || '';
+            }
+
+            function truncate(text, length = 15) {
+                if (!text || text.length <= length) {
+                    return text || '...';
+                }
+                return text.substring(0, length) + '...';
+            }
+            
+            function updateAllCharts() {
+                calculateAndRenderLeaderboards();
+                calculateAndRenderCompanyGoals();
+                calculateAndRenderExitStrategyChart();
+                calculateAndRenderAverageProfitChart();
+                calculateAndRenderLeadSourceChart();
+                calculateAndRenderProfitComparisonChart();
+            }
+
+            // --- DATA MANAGEMENT ---
+            function saveContracts() {
+                localStorage.setItem(CONTRACTS_STORAGE_KEY, JSON.stringify(contracts));
+            }
+
+            function loadContracts() {
+                const storedContracts = localStorage.getItem(CONTRACTS_STORAGE_KEY);
+                if (storedContracts && Object.keys(JSON.parse(storedContracts)).length > 0) {
+                     contracts = JSON.parse(storedContracts);
+                } else {
+                    // Pre-populate with data from PDF if local storage is empty
+                    contracts = {
+                        "Brandon": [],
+                        "Colton": [],
+                        "Michael": [
+                            { id: crypto.randomUUID(), address: "1001 N NAGALEE", salesAgent: "Michael", salesRep: "Michael", leadSource: "PPC", exitStrategy: "Full Flip", profit: 153505, coeDate: "2025-07-15", notes: { monday: { text: "Probate hearing july 9 - should know more then", topChecked: false, bottomChecked: false }, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1006 E HANCOCK", salesAgent: "Michael", salesRep: "Michael", leadSource: "PPC", exitStrategy: "Novation", profit: 43000, coeDate: "2025-08-01", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } }
+                        ],
+                        "Dispo: Sean": [],
+                        "Escrow": [
+                             { id: crypto.randomUUID(), address: "123 Main St", salesAgent: "Escrow", salesRep: "Brandon", leadSource: "Direct Mail", exitStrategy: "Wholesale", profit: 25000, coeDate: "2025-09-10", notes: { monday: { text: "Making progress. New seller is meeting with probate attorney to see if she has legal right to sell on June 19th", topChecked: false, bottomChecked: false }, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } }
+                        ],
+                        "At Risk": [
+                            { id: crypto.randomUUID(), address: "456 Oak Ave", salesAgent: "At Risk", salesRep: "Colton", leadSource: "Radio", exitStrategy: "Light Flip", profit: 75000, coeDate: "2025-07-20", notes: { monday: {}, tuesday: {}, wednesday: { text: "Need to get Alonte, who is in prison and refusing to sign, to sign... what can we do?", topChecked: false, bottomChecked: false }, thursday: {}, friday: {} } }
+                        ],
+                        "Canceled": [
+                            { id: crypto.randomUUID(), address: "789 Pine Ln", salesAgent: "Canceled", salesRep: "Michael", leadSource: "TV", exitStrategy: "Full Flip", profit: 0, notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: { text: "Needing to get confirmation of title search and if there is a possible probate", topChecked: false, bottomChecked: false }, friday: {} } }
+                        ],
+                        "Closed": [
+                            // Existing closed deals
+                            { id: crypto.randomUUID(), address: "321 Elm Rd", salesAgent: "Closed", salesRep: "Michael", leadSource: "SEO", exitStrategy: "Wholetail", profit: 35000, coeDate: "2025-07-05", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "654 Maple Dr", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Referral", exitStrategy: "Wholesale", profit: 18000, coeDate: "2025-07-10", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: { text: "Listed for $147k, buy now 162k", topChecked: false, bottomChecked: false } } },
+                            { id: crypto.randomUUID(), address: "987 Cedar Ct", salesAgent: "Closed", salesRep: "Colton", leadSource: "JV", exitStrategy: "Sub2", profit: 92000, coeDate: "2025-08-22", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: { text: "Will close as soon as they qualify for a new loan", topChecked: false, bottomChecked: false } } },
+                            // Data from PDF
+                            { id: crypto.randomUUID(), address: "105 N 15th st Wymore", salesAgent: "Closed", salesRep: "Grant", leadSource: "United JV", exitStrategy: "Wholesale", profit: 8480, coeDate: "2025-01-08", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1008 W marfa ave", salesAgent: "Closed", salesRep: "Michael", leadSource: "Organic SEO -", exitStrategy: "Wholesale", profit: 8480, coeDate: "2025-01-15", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "704 E 14th St", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Radio", exitStrategy: "Wholesale", profit: 63876.83, coeDate: "2024-01-15", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1611 SE Mistletoe St", salesAgent: "Closed", salesRep: "Grant", leadSource: "Direct Mail", exitStrategy: "Wholesale", profit: 10350, coeDate: "2025-01-17", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2627 Ave N", salesAgent: "Closed", salesRep: "Michael", leadSource: "PPC", exitStrategy: "Wholesale", profit: 18529, coeDate: "2025-01-10", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1745 Burnham", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Unknown", exitStrategy: "Fix & Flip", profit: 16728, coeDate: "2024-01-22", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "612 E 18th St", salesAgent: "Closed", salesRep: "Michael", leadSource: "JV Referral", exitStrategy: "Wholetail", profit: 53779, coeDate: "2025-01-31", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2036 s 198th st", salesAgent: "Closed", salesRep: "Brandon", leadSource: "TV", exitStrategy: "Wholesale", profit: 13000, coeDate: "2025-01-28", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2301 Atwood", salesAgent: "Closed", salesRep: "Michael", leadSource: "PPC", exitStrategy: "Wholetail", profit: 26816, coeDate: "2025-02-11", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2904 Ave D", salesAgent: "Closed", salesRep: "Colton", leadSource: "TV", exitStrategy: "Wholesale", profit: 23000, coeDate: "2025-03-09", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1260 Belmont Ave", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Radio", exitStrategy: "Wholesale", profit: 17390, coeDate: "2025-02-18", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1212 4 st Onowa la", salesAgent: "Closed", salesRep: "Grant", leadSource: "Unknown", exitStrategy: "Wholesale", profit: 200, coeDate: "2024-10-23", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1322 Market st Beatrice", salesAgent: "Closed", salesRep: "Colton", leadSource: "JV Referral", exitStrategy: "Wholesale", profit: 6000, coeDate: "2025-02-25", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2904 londonshire", salesAgent: "Closed", salesRep: "Brandon", leadSource: "SEO", exitStrategy: "Wholetail", profit: 23487, coeDate: "2025-03-03", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2702 s 25th", salesAgent: "Closed", salesRep: "Colton", leadSource: "TV Ads", exitStrategy: "wholesale", profit: 10000, coeDate: "2025-03-07", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1859 Euclid Ave", salesAgent: "Closed", salesRep: "Colton", leadSource: "PPC", exitStrategy: "Wholesale", profit: 18690, coeDate: "2025-03-17", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "913 A St", salesAgent: "Closed", salesRep: "Colton", leadSource: "SEO", exitStrategy: "Wholesale", profit: 19000, coeDate: "2025-03-19", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "3542 Ave G", salesAgent: "Closed", salesRep: "Grant", leadSource: "Direct Mail", exitStrategy: "Wholesale", profit: 40000, coeDate: "2025-03-25", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "5610 Seward St (duplex)", salesAgent: "Closed", salesRep: "Michael", leadSource: "SEO", exitStrategy: "Wholesale", profit: 25591, coeDate: "2025-03-25", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "923 s Kimball St", salesAgent: "Closed", salesRep: "Colton", leadSource: "TV Ads", exitStrategy: "Wholesale", profit: 19022, coeDate: "2025-03-27", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1130 w 3rd", salesAgent: "Closed", salesRep: "Grant", leadSource: "Facebook", exitStrategy: "Wholesale", profit: 15000, coeDate: "2025-03-28", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "7509 Vinton St", salesAgent: "Closed", salesRep: "Brandon", leadSource: "TV", exitStrategy: "Fix & Flip", profit: 52449, coeDate: "2025-04-08", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "106 Western Ave", salesAgent: "Closed", salesRep: "Grant", leadSource: "TV", exitStrategy: "Novation", profit: 4600, coeDate: "2025-04-22", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "724 S 44th", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Direct Mail", exitStrategy: "Wholesale", profit: 7500, coeDate: "2025-04-18", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2120 SW 63rd", salesAgent: "Closed", salesRep: "Colton", leadSource: "TV", exitStrategy: "Wholesale", profit: 12500, coeDate: "2025-04-18", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1414 8th st", salesAgent: "Closed", salesRep: "Colton", leadSource: "Direct Mail", exitStrategy: "Wholetail", profit: 40014, coeDate: "2025-04-21", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "2210 the knolls", salesAgent: "Closed", salesRep: "Brandon", leadSource: "PPC", exitStrategy: "Wholesale", profit: 90000, coeDate: "2025-04-22", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "7321 Kearney Ave", salesAgent: "Closed", salesRep: "Colton", leadSource: "Direct Mail", exitStrategy: "Wholesale", profit: 20350, coeDate: "2025-04-22", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1023 Elk St", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Facebook", exitStrategy: "Wholesale", profit: 11000, coeDate: "2025-04-23", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "Sidney lowa Package", salesAgent: "Closed", salesRep: "Colton", leadSource: "TV", exitStrategy: "Wholesale", profit: 8333, coeDate: "2025-04-23", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                            { id: crypto.randomUUID(), address: "1624 5th Ave", salesAgent: "Closed", salesRep: "Brandon", leadSource: "Facebook", exitStrategy: "Wholesale", profit: 18250, coeDate: "2025-04-24", notes: { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {} } },
+                        ]
+                    };
+                     // Ensure all agent arrays exist
+                    SALES_AGENTS.forEach(agent => {
+                        if (!contracts[agent]) {
+                            contracts[agent] = [];
+                        }
+                    });
+                }
+                
+                SALES_AGENTS.forEach(agent => {
+                    if (!contracts[agent]) {
+                        contracts[agent] = [];
+                    }
+                    contracts[agent].forEach(contract => {
+                        if (typeof contract.titleCompany === 'undefined') { contract.titleCompany = ''; }
+                        if (typeof contract.salesRep === 'undefined') { contract.salesRep = ''; }
+                        if (typeof contract.leadSource === 'undefined') { contract.leadSource = ''; }
+
+                        if (!contract.notes) { contract.notes = {}; }
+                        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+                            const note = contract.notes[day];
+                            if (typeof note !== 'object' || note === null) {
+                                contract.notes[day] = { text: note || '', topChecked: false, bottomChecked: false };
+                            } else {
+                                if (typeof note.text === 'undefined') { note.text = ''; }
+                                if (typeof note.topChecked === 'undefined') { note.topChecked = false; }
+                                if (typeof note.bottomChecked === 'undefined') { note.bottomChecked = false; }
+                            }
+                        });
+                    });
+                });
+                renderAllContracts();
+                updateAllCharts();
+            }
+
+            // --- RENDERING ---
+            function renderAllContracts() {
+                const sectionsDiv = document.getElementById('salesAgentSections');
+                sectionsDiv.innerHTML = ''; 
+
+                const groups = {
+                    'New Contracts': 'new-contracts-group',
+                    'Dispo Que': 'dispo-group',
+                    'Escrow': 'escrow-group',
+                    'At Risk': 'at-risk-group',
+                    'Canceled': 'canceled-group',
+                    'Closed': 'closed-group'
+                };
+
+                const agentToGroup = {
+                    "Brandon": "New Contracts", "Colton": "New Contracts", "Michael": "New Contracts",
+                    "Dispo: Sean": "Dispo Que", "Escrow": "Escrow", "At Risk": "At Risk",
+                    "Canceled": "Canceled", "Closed": "Closed"
+                };
+
+                Object.keys(groups).forEach(groupName => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.id = groups[groupName];
+                    groupDiv.className = 'status-group';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'status-group-header';
+                    const title = document.createElement(groupName === 'New Contracts' ? 'h1' : 'h2');
+                    title.textContent = groupName;
+                    header.appendChild(title);
+                    groupDiv.appendChild(header);
+                    
+                    sectionsDiv.appendChild(groupDiv);
+                });
+
+                SALES_AGENTS.forEach(agent => {
+                    const groupName = agentToGroup[agent];
+                    const parentElement = document.getElementById(groups[groupName]);
+                    if (!parentElement) return;
+
+                    const agentSection = document.createElement('div');
+                    agentSection.className = 'sales-agent-section';
+                    agentSection.dataset.agent = agent; 
+                    
+                    const tableWrapper = document.createElement('div');
+                    tableWrapper.className = 'table-wrapper';
+
+                    tableWrapper.innerHTML = `
+                        <h3 class="sales-agent-header">${(agent === 'Escrow' || agent === 'At Risk' || agent === 'Canceled' || agent === 'Closed') ? `${agent} Files` : `Sales Agent: ${agent}`}</h3>
+                        <table class="contracts-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 3%;">No.</th>
+                                    <th style="width: 10%;">Address</th>
+                                    <th style="width: 7%;">Location</th>
+                                    <th style="width: 7%;">UC Date</th>
+                                    <th style="width: 7%;">COE Date</th>
+                                    <th style="width: 7%;">UC Price</th>
+                                    <th style="width: 7%;">Profit</th>
+                                    <th style="width: 7%;">Exp. Profit</th>
+                                    <th style="width: 8%;">Sales Rep</th>
+                                    <th style="width: 8%;">Exit Strategy</th>
+                                    <th style="width: 6%;">Mon</th>
+                                    <th style="width: 6%;">Tue</th>
+                                    <th style="width: 6%;">Wed</th>
+                                    <th style="width: 6%;">Thu</th>
+                                    <th style="width: 6%;">Fri</th>
+                                    <th style="width: 3%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="contractsTableBody-${agent.replace(/[^a-zA-Z0-9]/g, '')}"></tbody>
+                        </table>
+                    `;
+                    agentSection.appendChild(tableWrapper);
+                    const addButton = document.createElement('button');
+                    addButton.className = 'add-contract-button';
+                    addButton.textContent = `+ Add Contract for ${agent}`;
+                    addButton.onclick = () => addContract(agent);
+                    agentSection.appendChild(addButton);
+                    parentElement.appendChild(agentSection);
+
+                    const tableBody = document.getElementById(`contractsTableBody-${agent.replace(/[^a-zA-Z0-9]/g, '')}`);
+
+                    if (contracts[agent] && contracts[agent].length > 0) {
+                        contracts[agent].forEach((contract, index) => {
+                            const row = createRow(contract, agent, index);
+                            tableBody.appendChild(row);
+                        });
+                    }
+                });
+            }
+            
+            function createRow(contract, agent, index) {
+                const row = document.createElement('tr');
+                row.dataset.contractId = contract.id;
+                row.dataset.agent = agent; 
+
+                const exitOptions = ['--Select--', ...EXIT_STRATEGIES].map(opt => 
+                    `<option value="${opt === '--Select--' ? '' : opt}" ${contract.exitStrategy === opt ? 'selected' : ''}>${opt}</option>`
+                ).join('');
+
+                const salesRepOptions = ['--Select--', ...SALES_REPS].map(opt =>
+                    `<option value="${opt === '--Select--' ? '' : opt}" ${contract.salesRep === opt ? 'selected' : ''}>${opt}</option>`
+                ).join('');
+
+                let noteCellsHTML = '';
+                ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+                    const note = contract.notes[day] || {};
+                    let highlightClass = '';
+                    if (note.topChecked) {
+                        highlightClass = 'highlight-green';
+                    } else if (note.bottomChecked) {
+                        highlightClass = 'highlight-yellow';
+                    }
+
+                    noteCellsHTML += `
+                        <td class="note-cell ${highlightClass}" data-day="${day}">
+                            <div class="note-cell-content">
+                                <div class="note-checkbox-container">
+                                    <input type="checkbox" class="note-checkbox" data-check="top" ${note.topChecked ? 'checked' : ''}>
+                                    <input type="checkbox" class="note-checkbox" data-check="bottom" ${note.bottomChecked ? 'checked' : ''}>
+                                </div>
+                                <div class="note-preview">${truncate(note.text)}</div>
+                            </div>
+                        </td>
+                    `;
+                });
+                
+                let moveMenuItems = '';
+                SALES_AGENTS.forEach(targetAgent => {
+                    if (targetAgent !== agent) {
+                        moveMenuItems += `<div class="move-menu-item" data-target-agent="${targetAgent}">${targetAgent}</div>`;
+                    }
+                });
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>
+                        <div><input type="text" class="table-input" data-field="address" value="${contract.address || ''}"></div>
+                        <div class="move-container">
+                            <button class="move-btn" title="Move Contract">➔ Move</button>
+                            <div class="move-menu">${moveMenuItems}</div>
+                        </div>
+                    </td>
+                    <td><input type="text" class="table-input" data-field="location" value="${contract.location || ''}"></td>
+                    <td><input type="date" class="table-input" data-field="ucDate" value="${contract.ucDate || ''}"></td>
+                    <td><input type="date" class="table-input" data-field="coeDate" value="${contract.coeDate || ''}"></td>
+                    <td><input type="text" class="table-input" data-field="ucPrice" value="${formatCurrencyForDisplay(contract.ucPrice)}" placeholder="$"></td>
+                    <td><input type="text" class="table-input" data-field="profit" value="${formatCurrencyForDisplay(contract.profit)}" placeholder="$"></td>
+                    <td><input type="text" class="table-input" data-field="expectedProfit" value="${formatCurrencyForDisplay(contract.expectedProfit)}" placeholder="$"></td>
+                    <td><select class="table-select" data-field="salesRep">${salesRepOptions}</select></td>
+                    <td><select class="table-select" data-field="exitStrategy">${exitOptions}</select></td>
+                    ${noteCellsHTML}
+                    <td class="actions-cell">
+                        <button class="details-btn" title="Open Details">+</button>
+                    </td>
+                `;
+                return row;
+            }
+
+            // --- CHARTING LOGIC ---
+            function calculateAndRenderCompanyGoals() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const quarter = Math.floor(month / 3) + 1;
+
+                const mtdStart = new Date(year, month, 1);
+                const qtdStart = new Date(year, (quarter - 1) * 3, 1);
+                const ytdStart = new Date(year, 0, 1);
+
+                const calculateTotalProfit = (startDate) => {
+                    let totalProfit = 0;
+                    SALES_AGENTS.forEach(agent => {
+                        if (contracts[agent]) {
+                            contracts[agent].forEach(contract => {
+                                if (LEADERBOARD_AGENTS.includes(contract.salesRep)) {
+                                    const profit = Number(contract.profit);
+                                    const coeDate = contract.coeDate ? new Date(contract.coeDate + 'T00:00:00') : null;
+                                    if (profit && coeDate && coeDate >= startDate) {
+                                        totalProfit += profit;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    return totalProfit;
+                };
+
+                const monthlyTotal = calculateTotalProfit(mtdStart);
+                const quarterlyTotal = calculateTotalProfit(qtdStart);
+                const yearlyTotal = calculateTotalProfit(ytdStart);
+
+                const monthlyPercent = (monthlyTotal / COMPANY_GOALS.month) * 100;
+                document.getElementById('monthly-goal-bar').style.width = `${Math.min(monthlyPercent, 100)}%`;
+                document.getElementById('monthly-goal-text').textContent = `${formatCurrencyForDisplay(monthlyTotal)} / ${formatCurrencyForDisplay(COMPANY_GOALS.month)}`;
+
+                const quarterlyPercent = (quarterlyTotal / COMPANY_GOALS.quarter) * 100;
+                document.getElementById('quarterly-goal-bar').style.width = `${Math.min(quarterlyPercent, 100)}%`;
+                document.getElementById('quarterly-goal-text').textContent = `${formatCurrencyForDisplay(quarterlyTotal)} / ${formatCurrencyForDisplay(COMPANY_GOALS.quarter)}`;
+
+                const yearlyPercent = (yearlyTotal / COMPANY_GOALS.year) * 100;
+                document.getElementById('yearly-goal-bar').style.width = `${Math.min(yearlyPercent, 100)}%`;
+                document.getElementById('yearly-goal-text').textContent = `${formatCurrencyForDisplay(yearlyTotal)} / ${formatCurrencyForDisplay(COMPANY_GOALS.year)}`;
+            }
+
+            function calculateAndRenderLeaderboards() {
+                const currentYear = 2025; // As per user request
+                const currentMonth = 6; // July (0-indexed)
+                const currentQuarter = 3; 
+                const monthName = "July";
+
+                document.getElementById('mtd-title').textContent = `${monthName} Profit`;
+                document.getElementById('qtd-title').textContent = `Q${currentQuarter} Profit`;
+                document.getElementById('ytd-title').textContent = `${currentYear} YTD Profit`;
+
+                const mtdStart = new Date(currentYear, currentMonth, 1);
+                const mtdEnd = new Date(currentYear, currentMonth + 1, 0); // Last day of July
+                const qtdStart = new Date(currentYear, (currentQuarter - 1) * 3, 1); // July 1st
+                const qtdEnd = new Date(currentYear, currentQuarter * 3, 0); // September 30th
+                const ytdStart = new Date(currentYear, 0, 1);
+                const ytdEnd = new Date(currentYear, 11, 31);
+
+                const getProfitByRep = (startDate, endDate) => {
+                    const repProfits = {};
+                    LEADERBOARD_AGENTS.forEach(rep => repProfits[rep] = 0);
+                    let total = 0;
+
+                    SALES_AGENTS.forEach(agent => {
+                        if (contracts[agent]) {
+                            contracts[agent].forEach(contract => {
+                                const rep = contract.salesRep;
+                                if (rep && LEADERBOARD_AGENTS.includes(rep)) {
+                                    const profit = Number(contract.profit);
+                                    const coeDate = contract.coeDate ? new Date(contract.coeDate + 'T00:00:00') : null;
+                                    if (profit && coeDate && coeDate >= startDate && coeDate <= endDate) {
+                                        repProfits[rep] += profit;
+                                        total += profit;
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    return {
+                        data: Object.entries(repProfits)
+                            .map(([name, profit]) => ({ name, profit }))
+                            .sort((a, b) => b.profit - a.profit),
+                        total: total
+                    };
+                };
+                
+                const mtdData = getProfitByRep(mtdStart, mtdEnd);
+                const qtdData = getProfitByRep(qtdStart, qtdEnd);
+                const ytdData = getProfitByRep(ytdStart, ytdEnd);
+
+                document.getElementById('mtd-total').textContent = formatCurrencyForDisplay(mtdData.total);
+                document.getElementById('qtd-total').textContent = formatCurrencyForDisplay(qtdData.total);
+                document.getElementById('ytd-total').textContent = formatCurrencyForDisplay(ytdData.total);
+
+                renderBarChart('mtd-chart', mtdData.data);
+                renderBarChart('qtd-chart', qtdData.data);
+                renderBarChart('ytd-chart', ytdData.data);
+            }
+
+            function calculateAndRenderExitStrategyChart() {
+                const strategyTotals = {};
+                EXIT_STRATEGIES.forEach(s => strategyTotals[s] = 0);
+                let grandTotal = 0;
+
+                SALES_AGENTS.forEach(agent => {
+                    if (contracts[agent]) {
+                        contracts[agent].forEach(contract => {
+                            const profit = Number(contract.profit);
+                            const strategy = contract.exitStrategy;
+                            if (profit && strategy && EXIT_STRATEGIES.includes(strategy)) {
+                                strategyTotals[strategy] += profit;
+                                grandTotal += profit;
+                            }
+                        });
+                    }
+                });
+                
+                const chartDataArray = Object.entries(strategyTotals).map(([name, profit]) => ({ name, profit }));
+
+                renderBarChart('exit-strategy-chart', chartDataArray, false);
+
+                const totalElement = document.getElementById('exit-strategy-total');
+                totalElement.innerHTML = `
+                    <span class="total-label">Total Profit</span>
+                    <span class="total-amount">${formatCurrencyForDisplay(grandTotal)}</span>
+                `;
+            }
+
+            function calculateAndRenderAverageProfitChart() {
+                const rangeSelect = document.getElementById('avg-profit-date-range');
+                const customRangeContainer = document.getElementById('avg-profit-custom-range');
+                const startDateInput = document.getElementById('avg-profit-start-date');
+                const endDateInput = document.getElementById('avg-profit-end-date');
+                
+                const selectedRange = rangeSelect.value;
+                customRangeContainer.classList.toggle('hidden', selectedRange !== 'custom');
+
+                let startDate, endDate;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                switch(selectedRange) {
+                    case 'last-month':
+                        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    case 'last-quarter':
+                        const currentQuarter = Math.floor(today.getMonth() / 3);
+                        startDate = new Date(today.getFullYear(), currentQuarter * 3 - 3, 1);
+                        endDate = new Date(today.getFullYear(), currentQuarter * 3, 0);
+                        break;
+                    case 'last-year':
+                        startDate = new Date(today.getFullYear() - 1, 0, 1);
+                        endDate = new Date(today.getFullYear() - 1, 11, 31);
+                        break;
+                    case 'ytd':
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        endDate = today;
+                        break;
+                    case 'custom':
+                        startDate = startDateInput.value ? new Date(startDateInput.value + 'T00:00:00') : null;
+                        endDate = endDateInput.value ? new Date(endDateInput.value + 'T00:00:00') : null;
+                        break;
+                    case 'all-time':
+                    default:
+                        startDate = null;
+                        endDate = null;
+                        break;
+                }
+
+                const strategyTotals = {};
+                const strategyCounts = {};
+                EXIT_STRATEGIES.forEach(s => {
+                    strategyTotals[s] = 0;
+                    strategyCounts[s] = 0;
+                });
+
+                SALES_AGENTS.forEach(agent => {
+                    if (contracts[agent]) {
+                        contracts[agent].forEach(contract => {
+                            const profit = parseCurrencyFromInput(contract.profit);
+                            const strategy = contract.exitStrategy;
+                            const coeDate = contract.coeDate ? new Date(contract.coeDate + 'T00:00:00') : null;
+
+                            const isDateInRange = !startDate || !endDate || (coeDate && coeDate >= startDate && coeDate <= endDate);
+                            const isDateInRangeForAllTime = !startDate && !endDate;
+
+                            if (profit > 0 && strategy && EXIT_STRATEGIES.includes(strategy) && (isDateInRange || isDateInRangeForAllTime)) {
+                                strategyTotals[strategy] += profit;
+                                strategyCounts[strategy]++;
+                            }
+                        });
+                    }
+                });
+
+                const avgData = EXIT_STRATEGIES.map(strategy => {
+                    const average = strategyCounts[strategy] > 0 ? strategyTotals[strategy] / strategyCounts[strategy] : 0;
+                    return { name: strategy, profit: average };
+                }).filter(item => item.profit > 0);
+
+                renderBarChart('avg-profit-chart', avgData, false);
+            }
+
+            function calculateAndRenderLeadSourceChart() {
+                const leadSourceTotals = {};
+                
+                if (contracts['Closed']) {
+                    contracts['Closed'].forEach(contract => {
+                        const profit = parseCurrencyFromInput(contract.profit);
+                        const source = contract.leadSource || 'Unknown';
+                        if (profit > 0) {
+                            if (!leadSourceTotals[source]) {
+                                leadSourceTotals[source] = 0;
+                            }
+                            leadSourceTotals[source] += profit;
+                        }
+                    });
+                }
+
+                const chartDataArray = Object.entries(leadSourceTotals)
+                    .map(([name, profit]) => ({ name, profit }))
+                    .sort((a, b) => b.profit - a.profit);
+
+                renderBarChart('lead-source-chart', chartDataArray, false);
+            }
+            
+            function calculateAndRenderProfitComparisonChart() {
+                const chartId = 'profit-comparison-chart';
+                if (charts[chartId]) {
+                    charts[chartId].destroy();
+                }
+
+                const strategySelect = document.getElementById('profit-comparison-strategy-select');
+                if (!strategySelect) return;
+                const selectedStrategy = strategySelect.value;
+                
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = now.getMonth();
+
+                const labels = [];
+                const monthlyPerformance = [];
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+                for (let month = 0; month <= currentMonth; month++) {
+                    let totalExpectedProfit = 0;
+                    let totalActualProfit = 0;
+
+                    SALES_AGENTS.forEach(agent => {
+                        if (contracts[agent]) {
+                            contracts[agent].forEach(contract => {
+                                const coeDate = contract.coeDate ? new Date(contract.coeDate + 'T00:00:00') : null;
+                                const expected = parseCurrencyFromInput(contract.expectedProfit);
+
+                                if (coeDate && coeDate.getFullYear() === currentYear && coeDate.getMonth() === month) {
+                                    if ((selectedStrategy === 'All' || contract.exitStrategy === selectedStrategy) && expected > 0) {
+                                        totalExpectedProfit += expected;
+                                        totalActualProfit += parseCurrencyFromInput(contract.profit) || 0;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    
+                    const percentage = (totalExpectedProfit > 0) ? (totalActualProfit / totalExpectedProfit) * 100 : 0;
+                    
+                    labels.push(monthNames[month]);
+                    monthlyPerformance.push(percentage);
+                }
+                
+                const ctx = document.getElementById(chartId).getContext('2d');
+                
+                const backgroundColors = monthlyPerformance.map(() => {
+                    const chartArea = ctx.canvas.getBoundingClientRect();
+                    const height = chartArea.height;
+                    const gradient = ctx.createLinearGradient(0, height, 0, 0);
+                    gradient.addColorStop(0, 'rgba(56, 189, 248, 0.7)'); // Light Blue
+                    gradient.addColorStop(1, 'rgba(20, 184, 166, 0.8)'); // Teal
+                    return gradient;
+                });
+
+                charts[chartId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Actual as % of Expected',
+                            data: monthlyPerformance,
+                            backgroundColor: backgroundColors,
+                            borderColor: 'rgba(20, 184, 166, 1)',
+                            borderWidth: 2,
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    callback: value => value.toFixed(0) + '%'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Performance (%)',
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                },
+                                 grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            },
+                            x: {
+                                ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                                grid: { display: false },
+                                title: {
+                                    display: true,
+                                    text: `Months in ${currentYear}`,
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                callbacks: {
+                                    label: function(context) {
+                                        let value = context.parsed.y;
+                                        return `Performance: ${value.toFixed(2)}%`;
+                                    }
+                                }
+                            },
+                            datalabels: {
+                               display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+
+            function renderBarChart(canvasId, data, isHorizontal = true) {
+                if (charts[canvasId]) {
+                    charts[canvasId].destroy();
+                }
+                
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const chartArea = ctx.canvas.getBoundingClientRect();
+
+                const backgroundColors = data.map(() => {
+                    let gradient;
+                    if (isHorizontal) {
+                        gradient = ctx.createLinearGradient(0, 0, chartArea.width, 0);
+                    } else {
+                        gradient = ctx.createLinearGradient(0, chartArea.height, 0, 0);
+                    }
+                    gradient.addColorStop(0, 'rgba(56, 189, 248, 0.7)'); // Light Blue
+                    gradient.addColorStop(1, 'rgba(20, 184, 166, 0.8)'); // Teal
+                    return gradient;
+                });
+
+                const chartData = {
+                    labels: data.map(item => item.name),
+                    datasets: [{
+                        label: 'Profit',
+                        data: data.map(item => item.profit),
+                        backgroundColor: backgroundColors,
+                        borderColor: 'rgba(20, 184, 166, 1)',
+                        borderWidth: 2,
+                        borderRadius: isHorizontal ? { topRight: 6, bottomRight: 6, topLeft: 0, bottomLeft: 0 } : { topRight: 6, topLeft: 6, bottomRight: 0, bottomLeft: 0 },
+                    }]
+                };
+
+                const options = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: isHorizontal ? 'y' : 'x',
+                    scales: {},
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Profit: ' + formatCurrencyForDisplay(context.raw);
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: false
+                        }
+                    }
+                };
+                
+                const valueAxis = isHorizontal ? 'x' : 'y';
+                const categoryAxis = isHorizontal ? 'y' : 'x';
+
+                options.scales[valueAxis] = {
+                    ticks: { 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            if (value >= 1000) return '$' + (value / 1000) + 'k';
+                            return '$' + value;
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                };
+
+                options.scales[categoryAxis] = {
+                    ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                    grid: { display: false }
+                };
+
+                charts[canvasId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: options,
+                    plugins: [ChartDataLabels] 
+                });
+            }
+
+            // --- PANEL LOGIC ---
+            function openDetailsPanel(contractId, agent) {
+                activeContractId = contractId;
+                activeAgent = agent;
+                const contract = contracts[agent].find(c => c.id === contractId);
+                if (!contract) return;
+
+                document.getElementById('panel-title').textContent = contract.address;
+                
+                const ipaStatusSelect = document.getElementById('panel-ipaPicturesStatus');
+                ipaStatusSelect.value = contract.ipaPicturesStatus || 'Needing Scheduled';
+                ipaStatusSelect.classList.toggle('needs-attention', ipaStatusSelect.value === 'Needing Scheduled');
+                
+                const disclosuresSelect = document.getElementById('panel-disclosures');
+                disclosuresSelect.value = contract.disclosures || 'Needing Signed';
+                disclosuresSelect.classList.toggle('needs-attention', disclosuresSelect.value === 'Needing Signed');
+
+                document.getElementById('panel-ipaDateTime').value = contract.ipaDateTime || '';
+                document.getElementById('panel-accessKeys').value = contract.accessKeys || '';
+                document.getElementById('panel-titleCompany').value = contract.titleCompany || '';
+                
+                const exitSelect = document.getElementById('panel-exitStrategy');
+                exitSelect.innerHTML = '';
+                ['--Select--', ...EXIT_STRATEGIES].forEach(optText => {
+                    const option = document.createElement('option');
+                    option.value = (optText === '--Select--') ? '' : optText;
+                    option.textContent = optText;
+                    exitSelect.appendChild(option);
+                });
+                exitSelect.value = contract.exitStrategy || '';
+
+                const leadSourceSelect = document.getElementById('panel-leadSource');
+                leadSourceSelect.innerHTML = '';
+                ['--Select--', ...LEAD_SOURCES].forEach(optText => {
+                    const option = document.createElement('option');
+                    option.value = (optText === '--Select--') ? '' : optText;
+                    option.textContent = optText;
+                    leadSourceSelect.appendChild(option);
+                });
+                leadSourceSelect.value = contract.leadSource || '';
+                
+                detailsPanel.classList.add('visible');
+                document.querySelector('.main-container').style.marginRight = '480px';
+            }
+
+            function closeDetailsPanel() {
+                detailsPanel.classList.remove('visible');
+                document.querySelector('.main-container').style.marginRight = '0';
+                activeContractId = null;
+                activeAgent = null;
+            }
+
+            function savePanelData(field, value) {
+                if (!activeContractId || !activeAgent) return;
+                const contractIndex = contracts[activeAgent].findIndex(c => c.id === activeContractId);
+                if (contractIndex > -1) {
+                    contracts[activeAgent][contractIndex][field] = value;
+                    saveContracts();
+                    if (field === 'exitStrategy' || field === 'titleCompany' || field === 'leadSource') {
+                        renderAllContracts(); 
+                    }
+                    if (field === 'exitStrategy' || field === 'leadSource') {
+                        updateAllCharts();
+                    }
+                }
+            }
+            
+            // --- NOTE MODAL LOGIC ---
+            function openNoteModal(contractId, agent, day) {
+                const contract = contracts[agent].find(c => c.id === contractId);
+                if (!contract) return;
+
+                noteModal.dataset.contractId = contractId;
+                noteModal.dataset.agent = agent;
+                noteModal.dataset.day = day;
+
+                const dayCapitalized = day.charAt(0).toUpperCase() + day.slice(1);
+                noteModalTitle.textContent = `Note for ${dayCapitalized} - ${contract.address}`;
+                noteModalTextarea.value = contract.notes[day].text;
+
+                noteModal.style.display = 'block';
+                modalOverlay.style.display = 'block';
+                noteModalTextarea.focus();
+            }
+
+            function closeNoteModal() {
+                noteModal.style.display = 'none';
+                modalOverlay.style.display = 'none';
+            }
+
+            function saveNoteFromModal() {
+                const { contractId, agent, day } = noteModal.dataset;
+                const newText = noteModalTextarea.value;
+
+                saveNoteText(contractId, agent, day, newText);
+                
+                const row = document.querySelector(`tr[data-contract-id="${contractId}"]`);
+                if (row) {
+                    const cell = row.querySelector(`.note-cell[data-day="${day}"] .note-preview`);
+                    if (cell) {
+                        cell.textContent = truncate(newText);
+                    }
+                }
+
+                closeNoteModal();
+            }
+
+
+            // --- TABLE DATA SAVING ---
+            function saveTableData(contractId, agent, field, value) {
+                if (!contractId || !agent || !field) return;
+                const contractIndex = contracts[agent].findIndex(c => c.id === contractId);
+                if (contractIndex > -1) {
+                    let finalValue = value;
+                    if (field === 'ucPrice' || field === 'profit' || field === 'expectedProfit') {
+                        finalValue = parseCurrencyFromInput(value);
+                    }
+                    contracts[agent][contractIndex][field] = finalValue;
+                    saveContracts();
+                    
+                    if (['ucPrice', 'profit', 'expectedProfit', 'coeDate', 'exitStrategy', 'salesRep', 'leadSource'].includes(field)) {
+                        updateAllCharts();
+                        if(field === 'ucPrice' || field === 'profit' || field === 'expectedProfit') {
+                            renderAllContracts();
+                        }
+                    }
+                }
+            }
+            
+            function saveNoteText(contractId, agent, day, text) {
+                 if (!contractId || !agent || !day) return;
+                const contractIndex = contracts[agent].findIndex(c => c.id === contractId);
+                if (contractIndex > -1) {
+                    contracts[agent][contractIndex].notes[day].text = text;
+                    saveContracts();
+                }
+            }
+
+            function saveNoteCheckboxState(contractId, agent, day, checkboxType, isChecked) {
+                if (!contractId || !agent || !day) return;
+                const contractIndex = contracts[agent].findIndex(c => c.id === contractId);
+                if (contractIndex > -1) {
+                    if (checkboxType === 'top') {
+                        contracts[agent][contractIndex].notes[day].topChecked = isChecked;
+                    } else if (checkboxType === 'bottom') {
+                        contracts[agent][contractIndex].notes[day].bottomChecked = isChecked;
+                    }
+                    saveContracts();
+                }
+            }
+
+            function addContract(salesAgent) {
+                const newContract = {
+                    id: crypto.randomUUID(),
+                    address: 'New Address', location: '', leadSource: '', ucDate: '', coeDate: '',
+                    ucPrice: '', profit: '', expectedProfit: '',
+                    salesAgent: salesAgent, 
+                    ipaPicturesStatus: 'Needing Scheduled',
+                    ipaDateTime: '',
+                    exitStrategy: '',
+                    disclosures: 'Needing Signed', 
+                    titleCompany: '', 
+                    salesRep: '',
+                    leadSource: '',
+                    notes: {
+                        monday: { text: '', topChecked: false, bottomChecked: false }, 
+                        tuesday: { text: '', topChecked: false, bottomChecked: false }, 
+                        wednesday: { text: '', topChecked: false, bottomChecked: false },
+                        thursday: { text: '', topChecked: false, bottomChecked: false }, 
+                        friday: { text: '', topChecked: false, bottomChecked: false },
+                    }
+                };
+                contracts[salesAgent].push(newContract);
+                saveContracts();
+                renderAllContracts();
+                updateAllCharts();
+            }
+
+            function moveContract(contractId, oldAgent, newAgent) {
+                if (oldAgent === newAgent) return;
+
+                const contractIndex = contracts[oldAgent].findIndex(c => c.id.toString() === contractId);
+                if (contractIndex === -1) return; 
+                
+                const [movedContract] = contracts[oldAgent].splice(contractIndex, 1);
+                movedContract.salesAgent = newAgent;
+                
+                if(!contracts[newAgent]) contracts[newAgent] = [];
+                contracts[newAgent].push(movedContract);
+                
+                saveContracts();
+                renderAllContracts();
+                updateAllCharts();
+            }
+            
+            // --- INITIALIZATION ---
+            detailsPanel = document.getElementById('details-panel');
+            noteModal = document.getElementById('note-modal');
+            modalOverlay = document.getElementById('modal-overlay');
+            noteModalTitle = document.getElementById('note-modal-title');
+            noteModalTextarea = document.getElementById('note-modal-textarea');
+            const mainContent = document.getElementById('salesAgentSections');
+            
+            // Collapsible Dashboard Listener
+            const dashboardHeader = document.querySelector('.dashboard-header');
+            const dashboardSection = document.querySelector('.dashboard-section');
+            dashboardHeader.addEventListener('click', () => {
+                dashboardSection.classList.toggle('collapsed');
+            });
+
+            // Setup for the new profit comparison chart selector
+            const profitStrategySelect = document.getElementById('profit-comparison-strategy-select');
+            profitStrategySelect.innerHTML = `<option value="All">All Strategies</option>`;
+            EXIT_STRATEGIES.forEach(strategy => {
+                profitStrategySelect.innerHTML += `<option value="${strategy}">${strategy}</option>`;
+            });
+            profitStrategySelect.addEventListener('change', calculateAndRenderProfitComparisonChart);
+
+            // Setup for Average Profit Chart Filters
+            const avgProfitDateRange = document.getElementById('avg-profit-date-range');
+            const avgProfitStartDate = document.getElementById('avg-profit-start-date');
+            const avgProfitEndDate = document.getElementById('avg-profit-end-date');
+            avgProfitDateRange.addEventListener('change', calculateAndRenderAverageProfitChart);
+            avgProfitStartDate.addEventListener('change', calculateAndRenderAverageProfitChart);
+            avgProfitEndDate.addEventListener('change', calculateAndRenderAverageProfitChart);
+
+
+            loadContracts();
+
+            // Panel Listeners
+            document.querySelector('.panel-close-btn').addEventListener('click', closeDetailsPanel);
+            detailsPanel.addEventListener('change', (e) => {
+                if(e.target.matches('select')) {
+                    savePanelData(e.target.dataset.field, e.target.value);
+                    if (e.target.id === 'panel-ipaPicturesStatus') {
+                        e.target.classList.toggle('needs-attention', e.target.value === 'Needing Scheduled');
+                    }
+                    if (e.target.id === 'panel-disclosures') {
+                        e.target.classList.toggle('needs-attention', e.target.value === 'Needing Signed');
+                    }
+                }
+            });
+            detailsPanel.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (target.matches('input[type="text"], input[type="datetime-local"]')) {
+                     savePanelData(target.dataset.field, target.value);
+                }
+            }, true);
+
+            // Main Content Table Listeners
+            mainContent.addEventListener('click', e => {
+                const detailsBtn = e.target.closest('.details-btn');
+                const moveBtn = e.target.closest('.move-btn');
+                const moveMenuItem = e.target.closest('.move-menu-item');
+                const notePreview = e.target.closest('.note-preview');
+                const row = e.target.closest('tr');
+
+                if (detailsBtn && row) {
+                    const { contractId, agent } = row.dataset;
+                    openDetailsPanel(contractId, agent);
+                    return;
+                }
+
+                if (moveBtn && row) {
+                    const menu = moveBtn.nextElementSibling;
+                    const rect = moveBtn.getBoundingClientRect();
+                    
+                    document.querySelectorAll('.move-menu').forEach(m => {
+                        if (m !== menu) m.classList.remove('visible');
+                    });
+
+                    if (menu.classList.contains('visible')) {
+                        menu.classList.remove('visible');
+                    } else {
+                        menu.style.top = `${rect.bottom}px`;
+                        menu.style.left = `${rect.left}px`;
+                        menu.classList.add('visible');
+                    }
+                    return;
+                }
+
+                if (moveMenuItem) {
+                    const { contractId, agent } = row.dataset;
+                    const targetAgent = moveMenuItem.dataset.targetAgent;
+                    moveContract(contractId, agent, targetAgent);
+                    return;
+                }
+
+                if (notePreview && row) {
+                    const noteCell = notePreview.closest('.note-cell');
+                    const { contractId, agent } = row.dataset;
+                    const day = noteCell.dataset.day;
+                    openNoteModal(contractId, agent, day);
+                    return;
+                }
+            });
+
+            mainContent.addEventListener('change', (e) => {
+                const target = e.target;
+                const row = target.closest('tr');
+                if (!row) return;
+                const { contractId, agent } = row.dataset;
+
+                if (target.matches('select.table-select')) {
+                    saveTableData(contractId, agent, target.dataset.field, target.value);
+                }
+                
+                if (target.matches('.note-checkbox')) {
+                    const noteCell = target.closest('.note-cell');
+                    const day = noteCell.dataset.day;
+                    const checkboxType = target.dataset.check;
+                    const isChecked = target.checked;
+
+                    saveNoteCheckboxState(contractId, agent, day, checkboxType, isChecked);
+
+                    const topBox = noteCell.querySelector('[data-check="top"]');
+                    const bottomBox = noteCell.querySelector('[data-check="bottom"]');
+                    noteCell.classList.remove('highlight-green', 'highlight-yellow');
+                    if (topBox.checked) {
+                        noteCell.classList.add('highlight-green');
+                    } else if (bottomBox.checked) {
+                        noteCell.classList.add('highlight-yellow');
+                    }
+                }
+            });
+
+            mainContent.addEventListener('blur', (e) => {
+                const target = e.target;
+                const row = target.closest('tr');
+                if (!row || !target.matches('input.table-input')) return;
+                const { contractId, agent } = row.dataset;
+                saveTableData(contractId, agent, target.dataset.field, target.value);
+            }, true);
+
+            // Close move menu if clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.move-container')) {
+                    document.querySelectorAll('.move-menu').forEach(m => m.classList.remove('visible'));
+                }
+            });
+
+            // Modal Listeners
+            document.getElementById('note-modal-save').addEventListener('click', saveNoteFromModal);
+            document.getElementById('note-modal-cancel').addEventListener('click', closeNoteModal);
+            modalOverlay.addEventListener('click', closeNoteModal);
+
+             // --- Chat Nav Logic ---
+            const chatBubble = document.getElementById('chat-bubble');
+            const chatMenu = document.getElementById('chat-nav-menu');
+            const chatOverlay = document.getElementById('chat-nav-overlay');
+            const chatMenuClose = document.getElementById('chat-menu-close');
+
+            function toggleChatMenu() {
+                chatMenu.classList.toggle('visible');
+                chatOverlay.classList.toggle('visible');
+            }
+
+            chatBubble.addEventListener('click', toggleChatMenu);
+            chatOverlay.addEventListener('click', toggleChatMenu);
+            chatMenuClose.addEventListener('click', toggleChatMenu);
+        });
+
+    </script>
+</body>
+</html>

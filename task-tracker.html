@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modern Task Tracker</title>
+  <style>
+    :root {
+      --bg-dark-start: #0d142b;
+      --bg-dark-end: #111827;
+      /* -- Light theme colors for the main content area -- */
+      --main-bg: #f3f4f6;
+      --main-card-bg: #ffffff;
+      --main-card-hover: #f9fafb;
+      --main-border-color: #e5e7eb;
+      --main-text-primary: #1f2937;
+      --main-text-secondary: #4b5563;
+
+      --card-bg: rgba(26, 32, 53, 0.7);
+      --card-bg-light: #1e293b; /* Solid dark slate */
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-primary: #e5e7eb;
+      --text-secondary: #9ca3af;
+      --accent-teal: #14b8a6;
+      --accent-orange: #fb923c;
+      --accent-indigo-start: #4f46e5;
+      --accent-indigo-end: #6366f1;
+      --accent-indigo-start-50: rgba(79, 70, 229, 0.5);
+      --accent-indigo-end-50: rgba(99, 102, 241, 0.4);
+      --accent-light-blue: #3b82f6; /* For Computer tasks */
+      --accent-green-start: #10b981;
+      --accent-green-end: #34d399;
+      --accent-green-start-light: rgba(16, 185, 129, 0.1);
+      --accent-green-end-light: rgba(52, 211, 153, 0.05);
+      --accent-green-border: rgba(16, 185, 129, 0.4);
+      --accent-yellow-start: rgba(234, 179, 8, 0.15);
+      --accent-yellow-end: rgba(202, 138, 4, 0.1);
+      --accent-yellow-border: rgba(234, 179, 8, 0.5);
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column; /* Changed for header */
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-dark-start);
+      color: var(--text-primary);
+    }
+    
+    /* --- App Header & Chat --- */
+    .app-header {
+        padding: 10px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+        background-color: var(--bg-dark-end);
+    }
+    .app-header nav {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .app-header nav a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 8px 15px;
+        border-radius: 9999px; /* Pill shape */
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .app-header nav a:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: var(--text-primary);
+    }
+    .nav-item {
+        position: relative;
+        display: inline-block;
+    }
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: var(--card-bg-light);
+        min-width: 200px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0;
+        border: 1px solid var(--border-color);
+    }
+    .dropdown-content a {
+        color: var(--text-primary);
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        margin-left: 0;
+        border-radius: 0;
+    }
+    .dropdown-content a:hover { 
+        background-color: var(--accent-indigo-start);
+        color: white;
+    }
+    .nav-item:hover .dropdown-content {
+        display: block;
+    }
+    .header-logo-text {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-left: 30px;
+        background: linear-gradient(to right, #38bdf8, #14b8a6);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        opacity: 0.6;
+    }
+
+    .chat-bubble {
+        cursor: pointer;
+        z-index: 1001;
+    }
+    .chat-bubble svg {
+        width: 32px;
+        height: 32px;
+        fill: #d1d5db;
+        transition: fill 0.2s ease;
+    }
+    .chat-bubble:hover svg {
+        fill: #ffffff;
+    }
+
+    .chat-nav-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 999;
+    }
+    .chat-nav-overlay.visible {
+        display: block;
+    }
+
+    .chat-nav-menu {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 280px;
+        height: 100%;
+        background-color: #111827;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+        transition: left 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-nav-menu.visible {
+        left: 0;
+    }
+    .chat-nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .chat-nav-header h2 {
+        margin: 0;
+        color: var(--text-light);
+    }
+    #chat-menu-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary-light);
+        font-size: 2rem;
+        cursor: pointer;
+    }
+    .chat-nav-menu ul {
+        list-style: none;
+        padding: 20px;
+        margin: 0;
+    }
+    .chat-nav-menu li a {
+        color: var(--text-secondary-light);
+        text-decoration: none;
+        display: block;
+        padding: 12px 15px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .chat-nav-menu li a:hover {
+        background-color: var(--accent-blue);
+        color: white;
+    }
+
+    /* --- Main Layout --- */
+    .app-main { display: flex; flex-grow: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 250px;
+      background-color: var(--bg-dark-end);
+      border-right: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .main {
+      flex: 1;
+      padding: 20px 40px;
+      overflow-y: auto;
+      transition: filter 0.3s;
+      background-color: var(--main-bg);
+    }
+    .main.panel-open {
+        filter: blur(3px) brightness(0.9);
+    }
+    .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    #dayTitle { font-size: 2.5rem; font-weight: 700; margin-bottom: 0; color: var(--main-text-primary); }
+    .input-container { display: flex; gap: 10px; margin-bottom: 20px; position: relative; }
+    #ai-thinking-indicator {
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        color: var(--main-text-secondary);
+        display: none;
+    }
+    input[type="text"] { flex-grow: 1; padding: 12px 15px; font-size: 1rem; border-radius: 8px; border: 1px solid var(--main-border-color); background-color: var(--main-card-bg); color: var(--main-text-primary); outline: none; transition: all 0.2s; }
+    input[type="text"]:disabled { background-color: #e5e7eb; cursor: not-allowed; }
+    input[type="text"]:focus { border-color: var(--accent-indigo-start); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
+
+    ul { list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 12px; }
+    
+    li.task-item {
+      padding: 15px;
+      padding-left: 10px;
+      display: flex;
+      align-items: center;
+      background-color: var(--main-card-bg);
+      border: 1px solid var(--main-border-color);
+      border-radius: 10px;
+      transition: all 0.2s;
+      gap: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .category-flag {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 6px;
+        height: 100%;
+        background-color: transparent;
+        transition: background-color 0.3s;
+    }
+    .category-flag.category-Computer { background-color: var(--accent-light-blue); }
+    .category-flag.category-Call { background-color: var(--accent-teal); }
+    .category-flag.category-Text { background-color: var(--accent-indigo-start); }
+    .category-flag.category-Other { background-color: var(--main-text-secondary); }
+
+    li.task-item:hover { border-color: #d1d5db; background-color: var(--main-card-hover); }
+    .task-content { flex: 1; display: flex; align-items: center; gap: 10px; color: var(--main-text-primary); }
+    .task-number { color: var(--main-text-secondary); font-weight: 500; width: 20px; text-align: right; margin-right: 5px; }
+    li.done span.task-text { text-decoration: line-through; color: var(--main-text-secondary); }
+    
+    li.done { 
+        background-image: linear-gradient(to right, var(--accent-green-start-light), var(--accent-green-end-light));
+        border-color: var(--accent-green-border); 
+    }
+    li.in-progress { 
+        background-image: linear-gradient(to right, var(--accent-yellow-start), var(--accent-yellow-end));
+        border-color: var(--accent-yellow-border);
+    }
+    
+    li.dragging { opacity: 0.5; cursor: grabbing; }
+    .drag-placeholder { height: 62px; background-color: rgba(79, 70, 229, 0.1); border: 2px dashed var(--accent-indigo-start); border-radius: 10px; margin-bottom: 12px; }
+    .section-label { margin-top: 30px; margin-bottom: 15px; font-weight: bold; color: var(--main-text-secondary); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+    #progressBarWrapper { margin: 25px 0; background: var(--main-border-color); height: 12px; border-radius: 6px; overflow: hidden; }
+    #progressBar { height: 100%; background-image: linear-gradient(to right, var(--accent-teal), var(--accent-orange)); width: 0%; transition: width 0.3s ease-in-out; border-radius: 6px; }
+    
+    .status-dropdown, .category-dropdown { background-color: #f9fafb; border: 1px solid var(--main-border-color); color: var(--main-text-secondary); border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; outline: none; margin-left: 10px; }
+    .status-dropdown option, .category-dropdown option { background-color: #ffffff; color: #000000; }
+    
+    .open-details-btn {
+        background: transparent;
+        border: none;
+        color: var(--main-text-secondary);
+        border-radius: 5px;
+        width: 28px;
+        height: 28px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .open-details-btn:hover {
+        color: var(--main-text-primary);
+        background-color: var(--main-bg);
+    }
+    .subtask-count-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background-color: var(--accent-orange);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: bold;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    
+    /* --- SIDEBAR AND DETAILS PANEL --- */
+    .sidebar-bottom-wrapper {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .sidebar h3 {
+        margin-top: 0;
+        padding: 0 5px 20px 5px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .sidebar button.list-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 14px 20px;
+        margin-bottom: 4px;
+        background: transparent;
+        color: var(--text-secondary);
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s;
+        position: relative;
+    }
+    .sidebar button.list-btn::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 0;
+        background-color: var(--accent-indigo-start);
+        border-radius: 2px;
+        transition: height 0.2s ease-in-out;
+    }
+    .sidebar button.list-btn:hover:not(.active) {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+    }
+    .sidebar button.list-btn.active {
+        background-color: rgba(79, 70, 229, 0.15);
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    .sidebar button.list-btn.active::before {
+        height: 60%;
+    }
+    .list-name { flex-grow: 1; }
+    .day-task-count {
+        background-color: rgba(251, 146, 60, 0.5);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-left: 10px;
+    }
+    .sidebar button.active .day-task-count {
+        background-color: rgba(79, 70, 229, 0.5);
+        color: white;
+    }
+    .delete-list-btn {
+        visibility: hidden;
+        opacity: 0;
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        transition: opacity 0.2s, color 0.2s;
+        flex-shrink: 0;
+        padding: 0 5px;
+    }
+    .sidebar button.list-btn:hover .delete-list-btn {
+        visibility: visible;
+        opacity: 1;
+    }
+    .delete-list-btn:hover {
+        color: var(--accent-orange);
+    }
+    .sidebar-divider {
+        border: none;
+        height: 1px;
+        background-color: var(--border-color);
+        margin: 15px 0;
+    }
+    .add-list-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px 20px;
+        margin-top: 10px;
+        font-weight: 600;
+        color: var(--text-primary);
+        background-color: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        transition: all 0.2s ease-out;
+    }
+    .add-list-btn:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: var(--accent-indigo-start);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* --- TIMER AND DETAILS PANEL --- */
+    .timer-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 10px;
+    }
+    .timer-display {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;
+        color: var(--main-text-secondary);
+        background-color: var(--main-bg);
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.3s;
+    }
+    .timer-display.running {
+        color: var(--accent-teal);
+        font-weight: bold;
+        box-shadow: 0 0 8px rgba(20, 184, 166, 0.5);
+    }
+    .timer-btn {
+        background: transparent;
+        border: 1px solid var(--main-text-secondary);
+        color: var(--main-text-secondary);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.2s;
+    }
+    .timer-btn:hover {
+        color: var(--main-text-primary);
+        border-color: var(--main-text-primary);
+    }
+    .timer-btn.running {
+        border-color: var(--accent-teal);
+        color: var(--accent-teal);
+    }
+    .timer-btn svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+    }
+
+    #taskDetailsPanel {
+        position: fixed;
+        top: 0;
+        right: -450px;
+        width: 420px;
+        height: 100%;
+        background-color: var(--bg-dark-end);
+        border-left: 1px solid var(--border-color);
+        box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+        z-index: 100;
+        transition: right 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+    }
+    #taskDetailsPanel.visible { right: 0; }
+    .panel-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+    .panel-header #detailTaskTitle { font-size: 1.5rem; background: transparent; border: none; color: var(--text-primary); padding: 5px; width: 100%; border-radius: 5px; }
+    .panel-header #detailTaskTitle:focus { background: rgba(0,0,0,0.2); box-shadow: 0 0 0 2px var(--accent-indigo-start); outline: none; }
+    #closePanelBtn { background: transparent; border: none; color: var(--text-secondary); font-size: 1.8rem; cursor: pointer; transition: color 0.2s; }
+    #closePanelBtn:hover { color: var(--text-primary); }
+    .panel-content { padding: 20px; overflow-y: auto; flex: 1; }
+    .panel-section { margin-bottom: 25px; }
+    .panel-section-title { font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 15px; }
+    #detailNotes { width: 100%; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); padding: 10px; font-family: 'Inter', sans-serif; resize: vertical; }
+    #detailNotes:focus { border-color: var(--accent-indigo-start); outline: none; }
+    #detailSubtaskList { padding: 0; gap: 5px; }
+    .detail-subtask-item { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 5px; }
+    .detail-subtask-item:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .detail-subtask-item span { color: var(--text-secondary); transition: color 0.2s; }
+    .detail-subtask-item.done span { text-decoration: line-through; color: #6b7280; }
+    .subtask-checkbox { transform: scale(1.1); flex-shrink: 0; appearance: none; width: 18px; height: 18px; border: 2px solid var(--text-secondary); border-radius: 5px; cursor: pointer; transition: all 0.2s; }
+    .subtask-checkbox:checked { background-color: var(--accent-green-start); border-color: var(--accent-green-start); }
+    .subtask-delete-btn { background: transparent; border: none; color: #6b7280; font-size: 1.2rem; cursor: pointer; padding: 0 5px; margin-left: auto; transition: color 0.2s; }
+    .subtask-delete-btn:hover { color: var(--text-primary); }
+    #addSubtaskInput { width: 100%; margin-top: 10px; }
+    .detail-subtask-number {
+        color: var(--text-secondary);
+        font-weight: 500;
+        width: 20px;
+        text-align: right;
+        flex-shrink: 0;
+    }
+    
+    .attachment-list { list-style: none; padding: 0; margin: 0; }
+    .attachment-item { display: flex; align-items: center; background-color: rgba(0,0,0,0.1); padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .attachment-item-name { flex-grow: 1; font-size: 0.9rem; color: var(--text-secondary); }
+    .attachment-delete-btn { background: transparent; border: none; color: #6b7280; font-size: 1.2rem; cursor: pointer; padding: 0 5px; transition: color 0.2s; }
+    .attachment-delete-btn:hover { color: var(--accent-orange); }
+    #addFileBtn {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: rgba(255,255,255,0.08);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    #addFileBtn:hover { background-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+    #fileInput { display: none; }
+    
+    /* --- NEW Bulk Action & Modal Styles --- */
+    .selection-checkbox {
+        display: none;
+        transform: scale(1.2); flex-shrink: 0; appearance: none;
+        width: 20px; height: 20px;
+        border: 2px solid var(--main-text-secondary); border-radius: 6px; cursor: pointer;
+        transition: all 0.2s;
+    }
+    .selection-checkbox:checked { background-color: var(--accent-indigo-start); border-color: var(--accent-indigo-start); }
+    .selection-mode .selection-checkbox { display: block; }
+    .selection-mode li.task-item { cursor: default; }
+    li.task-item.is-selected { background-color: #eef2ff; border-color: var(--accent-indigo-start); }
+
+    .header-actions { display: flex; gap: 10px; }
+    #selectTasksBtn {
+        font-size: 0.9rem; background: transparent; color: var(--main-text-secondary);
+        border: 1px solid var(--main-border-color); border-radius: 6px; padding: 8px 16px;
+        cursor: pointer; transition: all 0.2s;
+    }
+    #selectTasksBtn:hover { background-color: var(--main-card-bg); color: var(--main-text-primary); }
+    #selectTasksBtn.active { background-color: var(--accent-indigo-start); color: white; border-color: var(--accent-indigo-start); }
+
+    #bulkActionBar {
+        position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+        width: 500px; max-width: 90%; background-color: var(--bg-dark-end);
+        border: 1px solid var(--border-color); border-radius: 12px;
+        padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;
+        z-index: 1000; transition: bottom 0.3s ease-in-out; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    #bulkActionBar.visible { bottom: 30px; }
+    #bulkActionBar button {
+        padding: 10px 20px; font-size: 0.9rem; border-radius: 8px;
+        background-image: linear-gradient(to right, var(--accent-indigo-start), var(--accent-indigo-end));
+        color: white; border: none; cursor: pointer; font-weight: 500; transition: filter 0.2s;
+    }
+    #bulkActionBar button:hover { filter: brightness(1.2); }
+    #moveModal {
+        display: none; position: fixed; z-index: 2000; left: 0; top: 0;
+        width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(5px); justify-content: center; align-items: center;
+    }
+    .modal-content {
+        background: var(--bg-dark-end); padding: 30px; border-radius: 12px;
+        border: 1px solid var(--border-color); width: 400px; text-align: center;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .modal-days { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .modal-days button {
+        flex-basis: calc(50% - 10px); padding: 12px; border-radius: 8px;
+        background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
+        color: var(--text-primary); cursor: pointer; transition: all 0.2s;
+    }
+    .modal-days button:hover { background-color: rgba(255,255,255,0.1); border-color: var(--accent-indigo-start); }
+    .modal-days button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #modalCancel { background: transparent; color: var(--text-secondary); border: 1px solid transparent; padding: 10px 20px; cursor: pointer; }
+    #modalCancel:hover { color: var(--text-primary); }
+
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="chat-nav-overlay" class="chat-nav-overlay"></div>
+    <div id="chat-nav-menu" class="chat-nav-menu">
+        <div class="chat-nav-header">
+            <h2>Channels</h2>
+            <button id="chat-menu-close">&times;</button>
+        </div>
+        <ul>
+            <li><a href="#"># General</a></li>
+            <li><a href="#"># Sales Team</a></li>
+            <li><a href="#"># Construction</a></li>
+            <li><a href="#"># Dispo</a></li>
+            <li><a href="#"># Random</a></li>
+        </ul>
+    </div>
+    <header class="app-header">
+        <div id="chat-bubble" class="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        </div>
+        <nav>
+             <a href="Home.html">Home</a>
+             <a href="Sales.html">Sales</a>
+             <a href="Task-tracker.html">Tasks</a>
+             <div class="nav-item">
+                <a href="Transaction.html">Transactions</a>
+                <div class="dropdown-content">
+                    <a href="#">Buyers</a>
+                </div>
+            </div>
+             <div class="nav-item">
+                <a href="construction.html">Construction</a>
+                <div class="dropdown-content">
+                    <a href="#">Construction Summary</a>
+                    <a href="#">Construction Management</a>
+                    <a href="#">Contractor Database</a>
+                </div>
+            </div>
+            <a href="financialsdashboard.html">Financials</a>
+            <div class="header-logo-text">CLARITY</div>
+        </nav>
+    </header>
+  <main class="app-main">
+    <div class="sidebar" id="sidebar">
+      <!-- Sidebar content is now fully generated by JavaScript -->
+    </div>
+    <div class="main-content">
+      <div class="main">
+        <div class="main-header">
+            <h1 id="dayTitle"></h1>
+            <div class="header-actions">
+              <button id="selectTasksBtn" onclick="toggleSelectionMode()">Select Tasks</button>
+            </div>
+        </div>
+        <div class="input-container">
+            <input type="text" id="taskInput" placeholder="Add a new task and press Enter" />
+            <span id="ai-thinking-indicator">Categorizing...</span>
+        </div>
+        <div id="progressBarWrapper"><div id="progressBar"></div></div>
+        
+        <div id="inProgressSection">
+          <h3 class="section-label">In Progress</h3>
+          <ul id="inProgressTasks"></ul>
+        </div>
+        <div id="notStartedSection">
+          <h3 class="section-label">Not Started</h3>
+          <ul id="notStartedTasks"></ul>
+        </div>
+        <div id="completedSection">
+          <h3 class="section-label">Completed</h3>
+          <ul id="completedTasks"></ul>
+        </div>
+      </div>
+      
+      <div id="taskDetailsPanel">
+          <div class="panel-header">
+              <input type="text" id="detailTaskTitle" onblur="updateTaskTitle(this.value)">
+              <button id="closePanelBtn" onclick="closeDetailsPanel()">&times;</button>
+          </div>
+          <div class="panel-content">
+              <div class="panel-section">
+                  <h4 class="panel-section-title">Subtasks</h4>
+                  <ul id="detailSubtaskList"></ul>
+                  <input type="text" id="addSubtaskInput" placeholder="+ Add a subtask and press Enter">
+              </div>
+              <div class="panel-section">
+                  <h4 class="panel-section-title">Attachments</h4>
+                  <ul id="attachmentList"></ul>
+                  <button id="addFileBtn" onclick="document.getElementById('fileInput').click()">＋ Add File</button>
+                  <input type="file" id="fileInput" onchange="addAttachment(this.files)">
+              </div>
+              <div class="panel-section">
+                  <h4 class="panel-section-title">Notes</h4>
+                  <textarea id="detailNotes" placeholder="Add notes..." onblur="updateTaskNotes(this.value)"></textarea>
+              </div>
+          </div>
+      </div>
+
+      <div id="bulkActionBar">
+          <span id="selectionCount"></span>
+          <button onclick="openMoveModal()">Move</button>
+      </div>
+
+      <div id="moveModal">
+          <div class="modal-content">
+              <h3>Move selected tasks to...</h3>
+              <div id="modalDaysContainer" class="modal-days"></div>
+              <button id="modalCancel" onclick="closeMoveModal()">Cancel</button>
+          </div>
+      </div>
+    </div>
+  </main>
+<script type="module">
+    // This script block is intentionally left empty in the provided code.
+    // All JS logic is in the script tag below.
+</script>
+<script>
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const taskCategories = ["Computer", "Call", "Text", "Other"];
+let customLists = [];
+let currentList = "";
+let activeDetailTaskIndex = null;
+let timerInterval = null;
+let selectionMode = false;
+let selectedTaskIndices = new Set();
+
+
+// --- Data Persistence Functions ---
+function loadAllLists() {
+    const savedCustomLists = localStorage.getItem('task-tracker-custom-lists');
+    customLists = savedCustomLists ? JSON.parse(savedCustomLists) : [];
+    
+    const allLists = [...daysOfWeek, ...customLists];
+    const savedCurrentList = localStorage.getItem('task-tracker-current-list');
+
+    if (savedCurrentList && allLists.includes(savedCurrentList)) {
+        currentList = savedCurrentList;
+    } else {
+        currentList = allLists[0] || "My Tasks";
+    }
+}
+function saveCustomLists() {
+    localStorage.setItem('task-tracker-custom-lists', JSON.stringify(customLists));
+}
+function saveCurrentList() {
+    localStorage.setItem('task-tracker-current-list', currentList);
+}
+function getTasksForList(listName) {
+    return JSON.parse(localStorage.getItem(`tasks-${listName}`) || "[]").map(task => {
+        return {
+            ...task,
+            notes: task.notes || '',
+            subtasks: task.subtasks || [],
+            attachments: task.attachments || [],
+            category: task.category || 'Other',
+            timerElapsed: task.timerElapsed || 0,
+            timerStartTime: task.timerStartTime || null,
+            timerRunning: task.timerRunning || false
+        };
+    });
+}
+function saveTasksForList(listName, tasks) {
+    localStorage.setItem(`tasks-${listName}`, JSON.stringify(tasks));
+}
+
+// --- UI Update Functions ---
+function updateProgressBar() {
+  const tasks = getTasksForList(currentList);
+  if (tasks.length === 0) { document.getElementById("progressBar").style.width = "0%"; return; }
+  const mainTasksDone = tasks.filter(t => t.status === 'Completed').length;
+  const percent = (mainTasksDone / tasks.length) * 100;
+  document.getElementById("progressBar").style.width = `${percent}%`;
+}
+function loadTasks() {
+  const tasks = getTasksForList(currentList);
+  const inProgressList = document.getElementById("inProgressTasks");
+  const notStartedList = document.getElementById("notStartedTasks");
+  const completedList = document.getElementById("completedTasks");
+  inProgressList.innerHTML = "";
+  notStartedList.innerHTML = "";
+  completedList.innerHTML = "";
+  document.getElementById('dayTitle').textContent = currentList;
+  document.body.classList.toggle('selection-mode', selectionMode);
+
+  let inProgressCounter = 1;
+  let notStartedCounter = 1;
+  tasks.forEach((task, index) => {
+    let li;
+    switch (task.status) {
+        case 'In Progress':
+            li = createTaskItem(task, index, inProgressCounter++);
+            inProgressList.appendChild(li);
+            break;
+        case 'Completed':
+            li = createTaskItem(task, index, null);
+            completedList.appendChild(li);
+            break;
+        case 'Not Started':
+        default:
+            li = createTaskItem(task, index, notStartedCounter++);
+            notStartedList.appendChild(li);
+            break;
+    }
+  });
+  document.getElementById("inProgressSection").style.display = inProgressList.children.length > 0 ? 'block' : 'none';
+  document.getElementById("notStartedSection").style.display = notStartedList.children.length > 0 ? 'block' : 'none';
+  document.getElementById("completedSection").style.display = completedList.children.length > 0 ? 'block' : 'none';
+  updateProgressBar();
+}
+
+// --- Element Creation ---
+function createTaskItem(task, index, taskNumber) {
+    const li = document.createElement("li");
+    li.className = 'task-item';
+    li.dataset.index = index;
+    li.setAttribute("draggable", !selectionMode);
+    li.classList.toggle('is-selected', selectedTaskIndices.has(index));
+
+    const selectionCheckbox = document.createElement("input");
+    selectionCheckbox.type = "checkbox";
+    selectionCheckbox.className = "selection-checkbox";
+    selectionCheckbox.checked = selectedTaskIndices.has(index);
+    selectionCheckbox.onclick = (e) => { e.stopPropagation(); toggleTaskSelection(index); };
+    li.appendChild(selectionCheckbox);
+
+    const categoryFlag = document.createElement('div');
+    categoryFlag.className = `category-flag category-${task.category}`;
+    li.appendChild(categoryFlag);
+
+    const contentWrapper = document.createElement("div");
+    contentWrapper.className = "task-content";
+
+    const openDetailsBtn = document.createElement('button');
+    openDetailsBtn.className = 'open-details-btn';
+    openDetailsBtn.innerHTML = '＋';
+    openDetailsBtn.onclick = (e) => { e.stopPropagation(); openDetailsPanel(index); };
+
+    if (task.subtasks && task.subtasks.length > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'subtask-count-badge';
+        badge.textContent = task.subtasks.length;
+        openDetailsBtn.appendChild(badge);
+    }
+
+    if (task.status !== 'Completed') {
+        if (task.status === 'In Progress') li.classList.add("in-progress");
+        const numberSpan = document.createElement('span');
+        numberSpan.className = 'task-number';
+        if(taskNumber) numberSpan.textContent = `${taskNumber}.`;
+        
+        const statusCheckbox = document.createElement("input");
+        statusCheckbox.type = "checkbox";
+        statusCheckbox.style.cssText = `transform: scale(1.2); margin-right: 15px; flex-shrink: 0; appearance: none; width: 20px; height: 20px; border: 2px solid var(--main-text-secondary); border-radius: 6px; cursor: pointer; transition: all 0.2s;`;
+        statusCheckbox.onchange = () => { let tasks = getTasksForList(currentList); tasks[index].status = 'Completed'; stopTimer(index, false); saveTasksForList(currentList, tasks); init(); };
+        
+        const textSpan = document.createElement("span");
+        textSpan.className = "task-text";
+        textSpan.textContent = task.text;
+        textSpan.style.flexGrow = '1';
+
+        const timerControls = createTimerControls(task, index);
+        
+        const categoryDropdown = document.createElement("select");
+        categoryDropdown.className = "category-dropdown";
+        taskCategories.forEach(cat => { const option = document.createElement("option"); option.value = cat; option.textContent = cat; categoryDropdown.appendChild(option); });
+        categoryDropdown.value = task.category;
+        categoryDropdown.onchange = (e) => { updateTaskCategory(index, e.target.value); };
+
+        const statusDropdown = document.createElement("select");
+        statusDropdown.className = "status-dropdown";
+        ["Not Started", "In Progress"].forEach(statusText => { const option = document.createElement("option"); option.value = statusText; option.textContent = statusText; statusDropdown.appendChild(option); });
+        statusDropdown.value = task.status;
+        statusDropdown.onchange = () => { let tasks = getTasksForList(currentList); tasks[index].status = statusDropdown.value; saveTasksForList(currentList, tasks); loadTasks(); };
+        
+        const deleteBtn = createDeleteButton(index);
+        contentWrapper.append(numberSpan, statusCheckbox, textSpan, timerControls, categoryDropdown, statusDropdown, openDetailsBtn, deleteBtn);
+    } else {
+        li.classList.add("done");
+        const statusCheckbox = document.createElement("input");
+        statusCheckbox.type = "checkbox";
+        statusCheckbox.checked = true;
+        statusCheckbox.style.cssText = `transform: scale(1.2); margin-right: 15px; flex-shrink: 0; appearance: none; width: 20px; height: 20px; border: 2px solid var(--accent-green-start); background-color: var(--accent-green-start); border-radius: 6px; cursor: pointer; transition: all 0.2s;`;
+        statusCheckbox.onchange = () => { let tasks = getTasksForList(currentList); tasks[index].status = 'Not Started'; saveTasksForList(currentList, tasks); init(); };
+        const textSpan = document.createElement("span");
+        textSpan.className = "task-text";
+        textSpan.textContent = task.text;
+        const deleteBtn = createDeleteButton(index);
+        contentWrapper.append(statusCheckbox, textSpan, openDetailsBtn, deleteBtn);
+    }
+    li.appendChild(contentWrapper);
+    return li;
+}
+function createDeleteButton(index) {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "×";
+    deleteBtn.style.cssText = `background: transparent; border: none; color: var(--main-text-secondary); font-size: 1.5rem; cursor: pointer; padding: 0 10px; transition: color 0.2s; margin-left: 5px;`;
+    deleteBtn.onclick = (e) => { e.stopPropagation(); stopTimer(index, false); let tasks = getTasksForList(currentList); tasks.splice(index, 1); saveTasksForList(currentList, tasks); init(); };
+    return deleteBtn;
+}
+
+// --- Task & Day/List Management ---
+function addList() {
+    const listName = prompt("Enter the name for the new list:");
+    if (listName && listName.trim() !== "") {
+        const trimmedName = listName.trim();
+        const allLists = [...daysOfWeek, ...customLists];
+        if (!allLists.includes(trimmedName)) {
+            customLists.push(trimmedName);
+            saveCustomLists();
+            switchList(trimmedName);
+        } else {
+            alert("A list with this name already exists.");
+        }
+    }
+}
+function deleteList(listNameToDelete) {
+    if (confirm(`Are you sure you want to delete the list "${listNameToDelete}" and all its tasks? This cannot be undone.`)) {
+        customLists = customLists.filter(list => list !== listNameToDelete);
+        saveCustomLists();
+        localStorage.removeItem(`tasks-${listNameToDelete}`);
+        if (currentList === listNameToDelete) { switchList(daysOfWeek[0]); } else { init(); }
+    }
+}
+
+async function addTask() {
+  const input = document.getElementById("taskInput");
+  const text = input.value.trim();
+  if (!text) return;
+  const thinkingIndicator = document.getElementById('ai-thinking-indicator');
+  
+  input.disabled = true;
+  thinkingIndicator.style.display = 'inline';
+
+  const category = await getCategoryFromAI(text);
+  
+  let tasks = getTasksForList(currentList);
+  const newTask = { text, status: 'Not Started', category, notes: '', subtasks: [], attachments: [], timerElapsed: 0, timerRunning: false, timerStartTime: null };
+
+  if (category === 'Text') {
+      tasks.unshift(newTask);
+  } else {
+      tasks.push(newTask);
+  }
+
+  saveTasksForList(currentList, tasks);
+  
+  input.value = "";
+  input.disabled = false;
+  thinkingIndicator.style.display = 'none';
+  init();
+}
+
+document.getElementById("taskInput").addEventListener("keypress", e => { if (e.key === "Enter") { e.preventDefault(); addTask(); }});
+function switchList(listName) {
+  closeDetailsPanel();
+  stopCurrentlyRunningTimer();
+  currentList = listName;
+  saveCurrentList();
+  init();
+}
+function init() {
+  loadAllLists();
+  renderSidebar();
+  loadTasks();
+  setupDragAndDrop();
+  resumeRunningTimerOnLoad();
+}
+
+function renderSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.innerHTML = '';
+    const header = document.createElement('h3');
+    header.textContent = 'My Week';
+    sidebar.appendChild(header);
+    const dayButtonsContainer = document.createElement('div');
+    daysOfWeek.forEach(day => {
+        const btn = createListButton(day, false);
+        dayButtonsContainer.appendChild(btn);
+    });
+    sidebar.appendChild(dayButtonsContainer);
+    const bottomWrapper = document.createElement('div');
+    bottomWrapper.className = 'sidebar-bottom-wrapper';
+    const divider = document.createElement('hr');
+    divider.className = 'sidebar-divider';
+    bottomWrapper.appendChild(divider);
+    const customListButtonsContainer = document.createElement('div');
+    customLists.forEach(listName => {
+        const btn = createListButton(listName, true);
+        customListButtonsContainer.appendChild(btn);
+    });
+    bottomWrapper.appendChild(customListButtonsContainer);
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-list-btn';
+    addBtn.innerHTML = '＋ Add List';
+    addBtn.onclick = addList;
+    bottomWrapper.appendChild(addBtn);
+    sidebar.appendChild(bottomWrapper);
+}
+
+function createListButton(listName, isDeletable) {
+    const btn = document.createElement("button");
+    btn.className = "list-btn";
+    const nameSpan = document.createElement('span');
+    nameSpan.className = "list-name";
+    nameSpan.textContent = listName;
+    btn.appendChild(nameSpan);
+
+    if (listName === currentList) { btn.classList.add("active"); }
+    
+    const tasks = getTasksForList(listName);
+    const incompleteCount = tasks.filter(t => t.status !== 'Completed').length;
+    if (incompleteCount > 0) { 
+        const countBadge = document.createElement('span'); 
+        countBadge.className = 'day-task-count'; 
+        countBadge.textContent = incompleteCount; 
+        btn.appendChild(countBadge); 
+    }
+    
+    if (isDeletable) {
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'delete-list-btn';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.onclick = (e) => { e.stopPropagation(); deleteList(listName); };
+        btn.appendChild(deleteBtn);
+    }
+    btn.onclick = () => switchList(listName);
+    return btn;
+}
+
+
+// --- Drag & Drop ---
+function setupDragAndDrop() {
+    const lists = [document.getElementById('inProgressTasks'), document.getElementById('notStartedTasks')];
+    lists.forEach(list => {
+        list.addEventListener('dragstart', e => { if(e.target.classList.contains('task-item')) { e.target.classList.add('dragging'); } });
+        list.addEventListener('dragend', e => { if(e.target.classList.contains('task-item')) { e.target.classList.remove('dragging'); } });
+        list.addEventListener('dragover', e => {
+            e.preventDefault();
+            const draggingItem = document.querySelector('.dragging');
+            if (!draggingItem) return;
+            const afterElement = getDragAfterElement(list, e.clientY);
+            const placeholder = document.querySelector('.drag-placeholder') || document.createElement('div');
+            placeholder.className = 'drag-placeholder';
+            if (afterElement == null) { list.appendChild(placeholder); } else { list.insertBefore(placeholder, afterElement); }
+        });
+        list.addEventListener('drop', e => {
+            e.preventDefault();
+            const placeholder = document.querySelector('.drag-placeholder');
+            if(placeholder) placeholder.remove();
+            const draggingItem = document.querySelector('.dragging');
+            if (!draggingItem) return;
+            const fromIndex = parseInt(draggingItem.dataset.index, 10);
+            const afterElement = getDragAfterElement(list, e.clientY);
+            let allTasks = getTasksForList(currentList);
+            const fromStatus = allTasks[fromIndex].status;
+            let toIndex;
+            if (afterElement) {
+                toIndex = parseInt(afterElement.dataset.index, 10);
+            } else {
+                let lastTaskOfStatusIndex = -1;
+                for(let i=allTasks.length - 1; i >= 0; i--) { if (allTasks[i].status === fromStatus) { lastTaskOfStatusIndex = i; break; } }
+                toIndex = lastTaskOfStatusIndex + 1;
+            }
+            moveTask(fromIndex, toIndex);
+        });
+    });
+}
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('li.task-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+function moveTask(fromIndex, toIndex) {
+    let tasks = getTasksForList(currentList);
+    const [taskToMove] = tasks.splice(fromIndex, 1);
+    if(fromIndex < toIndex) toIndex--;
+    tasks.splice(toIndex, 0, taskToMove);
+    saveTasksForList(currentList, tasks);
+    loadTasks();
+}
+
+// --- TIMER LOGIC ---
+function formatTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+function createTimerControls(task, index) {
+    const container = document.createElement('div');
+    container.className = 'timer-controls';
+    const display = document.createElement('span');
+    display.className = 'timer-display';
+    display.id = `timer-display-${index}`;
+    display.classList.toggle('running', task.timerRunning);
+    display.textContent = formatTime(task.timerElapsed);
+    const btn = document.createElement('button');
+    btn.className = 'timer-btn';
+    btn.id = `timer-btn-${index}`;
+    btn.classList.toggle('running', task.timerRunning);
+    btn.innerHTML = task.timerRunning ? `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>` : `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>`;
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        const tasks = getTasksForList(currentList);
+        const currentTask = tasks[index];
+        if (currentTask.timerRunning) { stopTimer(index); } else { startTimer(index); }
+    };
+    container.append(display, btn);
+    return container;
+}
+function updateRunningTimerDisplay() {
+    let tasks = getTasksForList(currentList);
+    const runningTaskIndex = tasks.findIndex(t => t.timerRunning);
+    if (runningTaskIndex === -1) { clearInterval(timerInterval); timerInterval = null; return; }
+    const task = tasks[runningTaskIndex];
+    const display = document.getElementById(`timer-display-${runningTaskIndex}`);
+    if (display) {
+        const elapsedSinceStart = (Date.now() - task.timerStartTime) / 1000;
+        display.textContent = formatTime(task.timerElapsed + elapsedSinceStart);
+    }
+}
+function startTimer(index) {
+    stopCurrentlyRunningTimer(); 
+    let tasks = getTasksForList(currentList);
+    tasks[index].timerRunning = true;
+    tasks[index].timerStartTime = Date.now();
+    saveTasksForList(currentList, tasks);
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateRunningTimerDisplay, 1000);
+    loadTasks();
+}
+function stopTimer(index, shouldSave = true) {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    let tasks = getTasksForList(currentList);
+    if (!tasks[index] || !tasks[index].timerRunning) return;
+    const elapsed = (Date.now() - tasks[index].timerStartTime) / 1000;
+    tasks[index].timerElapsed += elapsed;
+    tasks[index].timerRunning = false;
+    tasks[index].timerStartTime = null;
+    if (shouldSave) {
+      saveTasksForList(currentList, tasks);
+      loadTasks();
+    }
+}
+function stopCurrentlyRunningTimer() {
+    const allLists = [...daysOfWeek, ...customLists];
+    allLists.forEach(listName => {
+        let tasks = getTasksForList(listName);
+        const runningIndex = tasks.findIndex(t => t.timerRunning);
+        if (runningIndex > -1) {
+            const elapsed = (Date.now() - tasks[runningIndex].timerStartTime) / 1000;
+            tasks[runningIndex].timerElapsed += elapsed;
+            tasks[runningIndex].timerRunning = false;
+            tasks[runningIndex].timerStartTime = null;
+            saveTasksForList(listName, tasks);
+        }
+    });
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+}
+function resumeRunningTimerOnLoad() {
+    let tasks = getTasksForList(currentList);
+    const runningIndex = tasks.findIndex(t => t.timerRunning);
+    if (runningIndex > -1) {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateRunningTimerDisplay, 1000);
+    }
+}
+
+// --- DETAILS PANEL LOGIC ---
+function openDetailsPanel(index) {
+    activeDetailTaskIndex = index;
+    const panel = document.getElementById('taskDetailsPanel');
+    const main = document.querySelector('.main');
+    renderDetailsPanel();
+    panel.classList.add('visible');
+    main.classList.add('panel-open');
+}
+function closeDetailsPanel() {
+    activeDetailTaskIndex = null;
+    const panel = document.getElementById('taskDetailsPanel');
+    const main = document.querySelector('.main');
+    panel.classList.remove('visible');
+    main.classList.remove('panel-open');
+    loadTasks();
+}
+function renderDetailsPanel() {
+    if (activeDetailTaskIndex === null) return;
+    const tasks = getTasksForList(currentList);
+    const task = tasks[activeDetailTaskIndex];
+    document.getElementById('detailTaskTitle').value = task.text;
+    document.getElementById('detailNotes').value = task.notes;
+    
+    // Subtasks
+    const subtaskListEl = document.getElementById('detailSubtaskList');
+    subtaskListEl.innerHTML = '';
+    task.subtasks.forEach((subtask, subtaskIndex) => {
+        const li = document.createElement('li');
+        li.className = 'detail-subtask-item';
+        li.classList.toggle('done', subtask.status === 'Completed');
+        const numberSpan = document.createElement('span');
+        numberSpan.className = 'detail-subtask-number';
+        numberSpan.textContent = `${subtaskIndex + 1}.`;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'subtask-checkbox';
+        checkbox.checked = subtask.status === 'Completed';
+        checkbox.onchange = () => toggleSubtaskStatus(subtaskIndex);
+        const textSpan = document.createElement('span');
+        textSpan.textContent = subtask.text;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'subtask-delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.onclick = () => deleteSubtask(subtaskIndex);
+        li.append(numberSpan, checkbox, textSpan, deleteBtn);
+        subtaskListEl.appendChild(li);
+    });
+    const addSubtaskInput = document.getElementById('addSubtaskInput');
+    addSubtaskInput.onkeypress = (e) => {
+        if(e.key === 'Enter' && addSubtaskInput.value.trim() !== '') {
+            addSubtask(addSubtaskInput.value.trim());
+            addSubtaskInput.value = '';
+        }
+    };
+    
+    // Attachments
+    const attachmentListEl = document.getElementById('attachmentList');
+    attachmentListEl.innerHTML = '';
+    task.attachments.forEach((fileName, fileIndex) => {
+        const li = document.createElement('li');
+        li.className = 'attachment-item';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'attachment-item-name';
+        nameSpan.textContent = fileName;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'attachment-delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.onclick = () => deleteAttachment(fileIndex);
+        li.append(nameSpan, deleteBtn);
+        attachmentListEl.appendChild(li);
+    });
+}
+function updateTaskProperty(key, value) {
+    if (activeDetailTaskIndex === null) return;
+    let tasks = getTasksForList(currentList);
+    tasks[activeDetailTaskIndex][key] = value;
+    saveTasksForList(currentList, tasks);
+}
+function updateTaskTitle(newTitle) { updateTaskProperty('text', newTitle); }
+function updateTaskNotes(newNotes) { updateTaskProperty('notes', newNotes); }
+function updateTaskCategory(index, newCategory) {
+    let tasks = getTasksForList(currentList);
+    const task = tasks[index];
+    const originalCategory = task.category;
+    
+    if (originalCategory === 'Text' && newCategory !== 'Text') {
+        const [movedTask] = tasks.splice(index, 1);
+        movedTask.category = newCategory;
+        tasks.push(movedTask);
+    } 
+    else if (originalCategory !== 'Text' && newCategory === 'Text') {
+        const [movedTask] = tasks.splice(index, 1);
+        movedTask.category = newCategory;
+        tasks.unshift(movedTask);
+    }
+    else {
+        task.category = newCategory;
+    }
+    
+    saveTasksForList(currentList, tasks);
+    loadTasks();
+}
+
+function addSubtask(text) {
+    if (activeDetailTaskIndex === null) return;
+    let tasks = getTasksForList(currentList);
+    tasks[activeDetailTaskIndex].subtasks.push({ text, status: 'Not Started' });
+    saveTasksForList(currentList, tasks);
+    renderDetailsPanel();
+    loadTasks();
+}
+function toggleSubtaskStatus(subtaskIndex) {
+    if (activeDetailTaskIndex === null) return;
+    let tasks = getTasksForList(currentList);
+    const subtask = tasks[activeDetailTaskIndex].subtasks[subtaskIndex];
+    subtask.status = subtask.status === 'Completed' ? 'Not Started' : 'Completed';
+    saveTasksForList(currentList, tasks);
+    renderDetailsPanel();
+}
+function deleteSubtask(subtaskIndex) {
+    if (activeDetailTaskIndex === null) return;
+    let tasks = getTasksForList(currentList);
+    tasks[activeDetailTaskIndex].subtasks.splice(subtaskIndex, 1);
+    saveTasksForList(currentList, tasks);
+    renderDetailsPanel();
+    loadTasks();
+}
+
+// --- Attachment Functions ---
+function addAttachment(files) {
+    if (activeDetailTaskIndex === null || !files.length) return;
+    const fileName = files[0].name;
+    let tasks = getTasksForList(currentList);
+    tasks[activeDetailTaskIndex].attachments.push(fileName);
+    saveTasksForList(currentList, tasks);
+    renderDetailsPanel();
+    document.getElementById('fileInput').value = '';
+}
+function deleteAttachment(fileIndex) {
+    if (activeDetailTaskIndex === null) return;
+    let tasks = getTasksForList(currentList);
+    tasks[activeDetailTaskIndex].attachments.splice(fileIndex, 1);
+    saveTasksForList(currentList, tasks);
+    renderDetailsPanel();
+}
+
+// --- AI CATEGORIZATION ---
+async function getCategoryFromAI(text) {
+    const prompt = `Classify the following task: "${text}". The categories are: Call, Text, Computer, Other. Respond with only one of those four words.`;
+    
+    let chatHistory = [];
+    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+    const payload = { contents: chatHistory };
+    const apiKey = ""
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            console.error("API Error:", response.status, response.statusText);
+            return "Other"; // Default on error
+        }
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+            let category = result.candidates[0].content.parts[0].text.trim();
+            if (taskCategories.includes(category)) {
+                return category;
+            }
+        }
+        return "Other"; // Default if response is not valid
+    } catch (error) {
+        console.error("Failed to fetch from Gemini API:", error);
+        return "Other"; // Default on network or other failure
+    }
+}
+
+// --- Chat Nav Logic ---
+const chatBubble = document.getElementById('chat-bubble');
+const chatMenu = document.getElementById('chat-nav-menu');
+const chatOverlay = document.getElementById('chat-nav-overlay');
+const chatMenuClose = document.getElementById('chat-menu-close');
+
+function toggleChatMenu() {
+    chatMenu.classList.toggle('visible');
+    chatOverlay.classList.toggle('visible');
+}
+
+chatBubble.addEventListener('click', toggleChatMenu);
+chatOverlay.addEventListener('click', toggleChatMenu);
+chatMenuClose.addEventListener('click', toggleChatMenu);
+
+
+init();
+</script>
+</body>
+</html>

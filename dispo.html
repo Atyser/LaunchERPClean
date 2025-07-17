@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispo Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-main: #f3f4f6;
+            --card-bg: #0d142b;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-light: #e5e7eb; 
+            --text-dark: #111827;
+            --text-secondary-light: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-header {
+            padding: 10px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #111827;
+            border-bottom: 1px solid #374151;
+            flex-shrink: 0;
+            z-index: 1001;
+        }
+
+        .main-header nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .main-header nav a {
+            color: var(--text-secondary-light);
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .main-header nav a:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--text-light);
+        }
+        
+        .nav-item {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #1e293b;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0;
+            border: 1px solid var(--border-color);
+        }
+        .dropdown-content a {
+            color: var(--text-light);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            margin-left: 0;
+            border-radius: 0;
+        }
+        .dropdown-content a:hover { 
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        .nav-item:hover .dropdown-content {
+            display: block;
+        }
+        .header-logo-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-left: 30px;
+            background: linear-gradient(to right, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            opacity: 0.6;
+        }
+
+        .chat-bubble {
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .chat-bubble svg {
+            width: 32px;
+            height: 32px;
+            fill: #d1d5db;
+            transition: fill 0.2s ease;
+        }
+        .chat-bubble:hover svg {
+            fill: #ffffff;
+        }
+
+        .chat-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .chat-nav-overlay.visible {
+            display: block;
+        }
+
+        .chat-nav-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background-color: #111827;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: left 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-nav-menu.visible {
+            left: 0;
+        }
+        .chat-nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .chat-nav-header h2 {
+            margin: 0;
+            color: var(--text-light);
+        }
+        #chat-menu-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary-light);
+            font-size: 2rem;
+            cursor: pointer;
+        }
+        .chat-nav-menu ul {
+            list-style: none;
+            padding: 20px;
+            margin: 0;
+        }
+        .chat-nav-menu li a {
+            color: var(--text-secondary-light);
+            text-decoration: none;
+            display: block;
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .chat-nav-menu li a:hover {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        
+        .page-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .dispo-queue-section {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            flex-shrink: 0;
+        }
+        .dispo-queue-section h2 {
+            margin-top: 0;
+        }
+        .dispo-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .dispo-table th, .dispo-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .dispo-table th {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .dispo-table tr:last-child td {
+            border-bottom: none;
+        }
+        .find-buyers-btn {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .find-buyers-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .dispo-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        #dispoMap {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+        }
+        .leaderboard-panel {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            overflow-y: auto;
+        }
+        .leaderboard-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            color: var(--text-dark);
+        }
+        .buyer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .buyer-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .buyer-item:last-child {
+            border-bottom: none;
+        }
+        .buyer-rank {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #6b7280;
+            width: 30px;
+        }
+        .buyer-name {
+            font-weight: 500;
+            flex-grow: 1;
+        }
+        .buyer-count {
+            font-weight: 700;
+            font-size: 1.1em;
+            background-color: var(--accent-blue);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #1f2937;
+            color: var(--text-light);
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        .leaflet-popup-content h3 {
+            margin: 0 0 5px;
+            color: var(--text-light);
+        }
+        .leaflet-popup-content p {
+            margin: 0;
+            color: var(--text-secondary-light);
+        }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: var(--text-secondary-light);
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-nav-overlay" class="chat-nav-overlay"></div>
+    <div id="chat-nav-menu" class="chat-nav-menu">
+        <div class="chat-nav-header">
+            <h2>Channels</h2>
+            <button id="chat-menu-close">&times;</button>
+        </div>
+        <ul>
+            <li><a href="#"># General</a></li>
+            <li><a href="#"># Sales Team</a></li>
+            <li><a href="#"># Construction</a></li>
+            <li><a href="#"># Dispo</a></li>
+            <li><a href="#"># Random</a></li>
+        </ul>
+    </div>
+    <header class="main-header">
+        <div id="chat-bubble" class="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        </div>
+        <nav>
+             <a href="home.html">Home</a>
+             <a href="Sales.html">Sales</a>
+             <a href="task-tracker.html">Tasks</a>
+             <div class="nav-item">
+                <a href="Transaction.html">Transactions</a>
+                <div class="dropdown-content">
+                    <a href="#">Buyers</a>
+                </div>
+            </div>
+             <div class="nav-item">
+                <a href="construction.html">Construction</a>
+                <div class="dropdown-content">
+                    <a href="#">Construction Summary</a>
+                    <a href="#">Construction Management</a>
+                    <a href="#">Contractor Database</a>
+                </div>
+            </div>
+            <a href="financialsdashboard.html">Financials</a>
+            <div class="header-logo-text">CLARITY</div>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <div class="dispo-queue-section">
+            <h2>Properties Ready for Disposition</h2>
+            <table class="dispo-table">
+                <thead>
+                    <tr>
+                        <th>Property Address</th>
+                        <th>Suggested Buyers</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="dispo-queue-body">
+                    <!-- Dispo properties will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <div class="dispo-container">
+            <div id="dispoMap"></div>
+            <div class="leaderboard-panel">
+                <h2 class="leaderboard-title">Top Buyers in View</h2>
+                <ul id="buyer-leaderboard" class="buyer-list">
+                    <!-- Leaderboard will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- MAP LOGIC ---
+            const map = L.map('dispoMap').setView([41.2565, -95.9345], 12); // Centered on Omaha, NE
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+            
+            let searchCircle;
+
+            // --- DATA GENERATION ---
+            const buyerNames = [ "Blackstone Group", "Starwood Capital", "Invitation Homes", "American Homes 4 Rent", "Tricon Residential", "Progress Residential", "Amherst Holdings", "Mynd", "FirstKey Homes", "VineBrook Homes", "HavenBrook Homes", "Sylvan Road", "Main Street Renewal", "Conrex", "Lafayette Real Estate", "PCCP", "Pretium", "Cerberus Capital", "KKR", "Carlyle Group", "Oaktree Capital", "Apollo Global", "Brookfield", "Nuveen", "Bridge Investment", "Cortland", "Greystar", "MAA", "AvalonBay", "Equity Residential" ];
+            const omahaCenter = { lat: 41.2565, lon: -95.9345 };
+            const buyerData = [];
+            const propertyMarkers = [];
+
+            function generateRandomPoint(center, radius) {
+                const y0 = center.lat;
+                const x0 = center.lon;
+                const rd = radius / 111300; // about 111300 meters in one degree
+                const u = Math.random();
+                const v = Math.random();
+                const w = rd * Math.sqrt(u);
+                const t = 2 * Math.PI * v;
+                const x = w * Math.cos(t);
+                const y = w * Math.sin(t);
+                return { 'lat': y + y0, 'lon': x + x0 };
+            }
+            
+            for(let i = 0; i < 100; i++) {
+                const buyerIndex = i % buyerNames.length;
+                const buyerName = buyerNames[buyerIndex];
+                const color = `hsl(${(buyerIndex * 360 / buyerNames.length)}, 70%, 50%)`;
+                const coords = generateRandomPoint(omahaCenter, 15000); // 15km radius
+                const streetNum = Math.floor(Math.random() * 18000) + 100;
+                const streetName = ["N 72nd St", "W Dodge Rd", "S 144th St", "Pacific St", "Giles Rd", "Maple St", "Fort St", "Blondo St"][Math.floor(Math.random() * 8)];
+                
+                const prop = { address: `${streetNum} ${streetName}, Omaha, NE`, lat: coords.lat, lon: coords.lon };
+
+                let buyer = buyerData.find(b => b.name === buyerName);
+                if (!buyer) {
+                    buyer = { name: buyerName, color: color, properties: [] };
+                    buyerData.push(buyer);
+                }
+                buyer.properties.push(prop);
+            }
+            
+            const dispoQueueProperties = [
+                { address: "4817 N 120th St, Omaha, NE", lat: 41.3033, lon: -96.0995 },
+                { address: "2505 S 188th Ave, Omaha, NE", lat: 41.2361, lon: -96.1982 },
+                { address: "1614 N 49th St, Omaha, NE", lat: 41.2721, lon: -95.9866 }
+            ];
+
+            // --- MAP & LEADERBOARD RENDERING ---
+            buyerData.forEach(buyer => {
+                const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${buyer.color}" width="32px" height="32px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+                const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+
+                buyer.properties.forEach(prop => {
+                    const marker = L.marker([prop.lat, prop.lon], { icon: customIcon });
+                    marker.bindPopup(`<h3>${prop.address}</h3><p>Buyer: ${buyer.name}</p>`);
+                    marker.addTo(map);
+                    propertyMarkers.push({ marker, buyerName: buyer.name, lat: prop.lat, lon: prop.lon });
+                });
+            });
+
+            function updateBuyerLeaderboard() {
+                const bounds = map.getBounds();
+                const buyerCounts = {};
+
+                propertyMarkers.forEach(({ marker, buyerName }) => {
+                    if (bounds.contains(marker.getLatLng())) {
+                        buyerCounts[buyerName] = (buyerCounts[buyerName] || 0) + 1;
+                    }
+                });
+
+                const sortedBuyers = Object.entries(buyerCounts).sort(([, a], [, b]) => b - a);
+                const leaderboardList = document.getElementById('buyer-leaderboard');
+                leaderboardList.innerHTML = '';
+
+                if (sortedBuyers.length === 0) {
+                    leaderboardList.innerHTML = '<li>No buyers in the current view.</li>';
+                    return;
+                }
+
+                sortedBuyers.forEach(([name, count], index) => {
+                    const li = document.createElement('li');
+                    li.className = 'buyer-item';
+                    li.innerHTML = `<span class="buyer-rank">${index + 1}.</span><span class="buyer-name">${name}</span><span class="buyer-count">${count}</span>`;
+                    leaderboardList.appendChild(li);
+                });
+            }
+
+            // --- DISPO QUEUE LOGIC ---
+            function renderDispoQueue() {
+                const tableBody = document.getElementById('dispo-queue-body');
+                tableBody.innerHTML = '';
+                dispoQueueProperties.forEach((prop, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${prop.address}</td>
+                        <td id="suggested-buyers-${index}">-</td>
+                        <td><button class="find-buyers-btn" data-index="${index}">Find Best Buyers</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            function findBestBuyers(dispoPropIndex) {
+                const dispoProp = dispoQueueProperties[dispoPropIndex];
+                map.setView([dispoProp.lat, dispoProp.lon], 14);
+
+                const accentBlueColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-blue').trim();
+
+                if (searchCircle) map.removeLayer(searchCircle);
+                searchCircle = L.circle([dispoProp.lat, dispoProp.lon], {
+                    radius: 2400, // Approx 1.5 miles
+                    color: accentBlueColor,
+                    fillColor: accentBlueColor,
+                    fillOpacity: 0.1
+                }).addTo(map);
+
+                const nearbyBuyerCounts = {};
+                const dispoLatLng = L.latLng(dispoProp.lat, dispoProp.lon);
+
+                propertyMarkers.forEach(({ marker, buyerName }) => {
+                    if (dispoLatLng.distanceTo(marker.getLatLng()) <= 2400) {
+                        nearbyBuyerCounts[buyerName] = (nearbyBuyerCounts[buyerName] || 0) + 1;
+                    }
+                });
+                
+                const sortedBuyers = Object.entries(nearbyBuyerCounts)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 3); // Get top 3
+
+                const suggestionsEl = document.getElementById(`suggested-buyers-${dispoPropIndex}`);
+                if (sortedBuyers.length > 0) {
+                    suggestionsEl.innerHTML = sortedBuyers.map(([name, count]) => `${name} (${count} nearby)`).join('<br>');
+                } else {
+                    suggestionsEl.textContent = 'No buyers with purchase history in this area.';
+                }
+            }
+
+            document.getElementById('dispo-queue-body').addEventListener('click', (e) => {
+                if (e.target.classList.contains('find-buyers-btn')) {
+                    findBestBuyers(e.target.dataset.index);
+                }
+            });
+
+
+            // --- CHAT NAV LOGIC ---
+            const chatBubble = document.getElementById('chat-bubble');
+            const chatMenu = document.getElementById('chat-nav-menu');
+            const chatOverlay = document.getElementById('chat-nav-overlay');
+            const chatMenuClose = document.getElementById('chat-menu-close');
+
+            function toggleChatMenu() {
+                chatMenu.classList.toggle('visible');
+                chatOverlay.classList.toggle('visible');
+            }
+
+            chatBubble.addEventListener('click', toggleChatMenu);
+            chatOverlay.addEventListener('click', toggleChatMenu);
+            chatMenuClose.addEventListener('click', toggleChatMenu);
+            
+            // Initial Load
+            map.on('moveend zoomend', updateBuyerLeaderboard);
+            updateBuyerLeaderboard();
+            renderDispoQueue();
+        });
+    </script>
+</body>
+</html>
